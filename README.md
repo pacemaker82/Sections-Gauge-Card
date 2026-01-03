@@ -73,7 +73,7 @@ title: Label
 
 A card showing positive and negative values.
 ```yaml
-type: custom:mini-gauge-card
+type: custom:sections-gauge-card
 entities:
   - entity: input_number.test_battery_power
     min: -3000
@@ -84,7 +84,7 @@ entities:
 
 A card showing multiple entities, transparency and color override.
 ```yaml
-type: custom:mini-gauge-card
+type: custom:sections-gauge-card
 entities:
   - entity: sensor.pv_power
     min: 0
