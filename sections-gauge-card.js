@@ -1,11 +1,91 @@
 class SectionsGaugeCard extends HTMLElement {
-  static getConfigElement() {
-    return document.createElement("sections-gauge-card-editor");
-  }
 
   static getConfigForm() {
-    return{};
-  }
+    return {
+      schema: [ 
+        {
+          name: "",
+          type: "grid",
+          schema: [
+            {
+                name: "style",
+                selector: { 
+                  select: { 
+                    mode: "dropdown",
+                    options: 
+                      ["1", 
+                      "2"],              
+                  },
+                },
+              },
+              {
+                name: "transparent",
+                selector: { boolean: {} },
+              },                
+              {
+                name: "show_zero_marker",
+                selector: { boolean: {} },
+              },  
+              {
+                name: "hide_state_labels",
+                selector: { boolean: {} },
+              },       
+          ]
+        }, 
+        {
+            name: "progress_color",
+            selector: { text: {} },
+        },  
+        { name: "entities",
+          selector: {
+            object: {
+              multiple: true,
+              label_field: "entity",
+              fields: {
+                entity: { 
+                  label: "Main Gauge Entity",
+                  selector: { entity: {} },
+                },                                                
+                target: {
+                  label: "Target (number or entity)",
+                  selector: { text: {} },
+                },
+                min: { 
+                  label: "Minimum Guage Value (number or entity)",
+                  selector: { text: {} },
+                }, 
+                max: { 
+                  label: "Maximum Guage Value (number or entity)",
+                  selector: { text: {} },
+                },                                           
+                decimal_places: { 
+                  label: "Decimal Places",
+                  selector: { number: {} },
+                },
+                unit_of_measurement: { 
+                  label: "Unit of Measurement override",
+                  selector: { text: {} },
+                },                                                                                                       
+              },
+            },
+          },
+        },                         
+      ],
+      computeLabel: (schema) => {
+        if (schema.name === "transparent") return "Make card transparent?";
+        if (schema.name === "show_zero_marker") return "Show Zero Marker?";
+        if (schema.name === "hide_state_labels") return "Hide State Labels?";
+        return undefined;
+      },
+      computeHelper: (schema) => {
+        switch (schema.name) {
+          case "help_text":
+            return "some helpful text";             
+        }
+        return undefined;
+      },
+    };
+  }    
 
   static getStubConfig() {
     return {
@@ -24,6 +104,7 @@ class SectionsGaugeCard extends HTMLElement {
       progress_color: "",
       style: 1,
       show_zero_marker: false,
+      hide_state_labels: false,
     };
   }
 
@@ -51,6 +132,7 @@ class SectionsGaugeCard extends HTMLElement {
       progress_color: "",
       style: 1,
       show_zero_marker: false,
+      hide_state_labels: false,
       ...normalized,
     };
     this._hasRendered = false;
@@ -180,6 +262,9 @@ class SectionsGaugeCard extends HTMLElement {
           line-height: 1.0;
           overflow: visible;
           transform: translateY(calc(var(--gauge-size, 160px) * 0.08));
+        }
+        :host([data-hide-labels="true"]) .value {
+          display: none;
         }
         :host([data-target-reached="true"]) .value .number {
           color: var(--progress-color, var(--primary-color));
@@ -621,6 +706,10 @@ class SectionsGaugeCard extends HTMLElement {
       this._hasFittedValue = true;
       this._fitValueText();
     }
+    this.setAttribute(
+      "data-hide-labels",
+      this._config.hide_state_labels ? "true" : "false"
+    );
     this._card.classList.toggle("transparent", Boolean(this._config.transparent));
     const style = Number(this._config.style) || 1;
     this.setAttribute("data-style", style);
@@ -868,147 +957,3 @@ window.customCards.push({
   name: "Sections Gauge Card",
   description: "Compact gauge with a configurable range.",
 });
-
-class SectionsGaugeCardEditor extends HTMLElement {
-  setConfig(config) {
-    this._config = { ...config };
-    this._ensureEditor();
-    this._renderEditor();
-  }
-
-  set hass(hass) {
-    this._hass = hass;
-    if (this._root) {
-      this._root.querySelectorAll("ha-entity-picker").forEach((picker) => {
-        picker.hass = hass;
-      });
-    }
-  }
-
-  _ensureEditor() {
-    if (this._root) return;
-    this._root = this.attachShadow({ mode: "open" });
-    this._root.innerHTML = `
-      <style>
-        .form {
-          display: grid;
-          gap: 12px;
-        }
-        .section {
-          font-weight: 600;
-          margin-top: 8px;
-        }
-        ha-textfield {
-          width: 100%;
-        }
-      </style>
-      <div class="form">
-        <div class="section">Entity 1</div>
-        <ha-entity-picker label="Entity" data-field="entity_0" allow-custom-entity></ha-entity-picker>
-        <ha-textfield label="Min (number or entity)" data-field="min_0"></ha-textfield>
-        <ha-textfield label="Max (number or entity)" data-field="max_0"></ha-textfield>
-        <ha-textfield label="Target (number or entity)" data-field="target_0"></ha-textfield>
-        <ha-textfield label="Unit override" data-field="unit_0"></ha-textfield>
-        <ha-textfield label="Decimal places" data-field="decimal_0"></ha-textfield>
-        <div class="section">Entity 2</div>
-        <ha-entity-picker label="Entity" data-field="entity_1" allow-custom-entity></ha-entity-picker>
-        <ha-textfield label="Min (number or entity)" data-field="min_1"></ha-textfield>
-        <ha-textfield label="Max (number or entity)" data-field="max_1"></ha-textfield>
-        <ha-textfield label="Target (number or entity)" data-field="target_1"></ha-textfield>
-        <ha-textfield label="Unit override" data-field="unit_1"></ha-textfield>
-        <ha-textfield label="Decimal places" data-field="decimal_1"></ha-textfield>
-        <ha-textfield label="Title" data-field="title"></ha-textfield>
-        <ha-switch data-field="show_zero_marker">Show zero marker</ha-switch>
-        <ha-textfield label="Progress color (CSS)" data-field="progress_color"></ha-textfield>
-        <ha-textfield label="Style (1 or 2)" data-field="style"></ha-textfield>
-        <ha-switch data-field="transparent">Transparent background</ha-switch>
-      </div>
-    `;
-    this._root.querySelectorAll("ha-entity-picker").forEach((picker) => {
-      picker.addEventListener("value-changed", (ev) => this._valueChanged(ev));
-    });
-    this._root.querySelectorAll("ha-textfield, ha-switch").forEach((input) => {
-      input.addEventListener("change", (ev) => this._valueChanged(ev));
-    });
-  }
-
-  _renderEditor() {
-    if (!this._root) return;
-    const entities = Array.isArray(this._config.entities) ? this._config.entities : [];
-    const entity0 = entities[0] || {};
-    const entity1 = entities[1] || {};
-    this._root.querySelector('[data-field="entity_0"]').value = entity0.entity || "";
-    this._root.querySelector('[data-field="min_0"]').value = entity0.min ?? "";
-    this._root.querySelector('[data-field="max_0"]').value = entity0.max ?? "";
-    this._root.querySelector('[data-field="target_0"]').value = entity0.target ?? "";
-    this._root.querySelector('[data-field="unit_0"]').value =
-      entity0.unit_of_measurement ?? "";
-    this._root.querySelector('[data-field="decimal_0"]').value =
-      entity0.decimal_places ?? "";
-    this._root.querySelector('[data-field="entity_1"]').value = entity1.entity || "";
-    this._root.querySelector('[data-field="min_1"]').value = entity1.min ?? "";
-    this._root.querySelector('[data-field="max_1"]').value = entity1.max ?? "";
-    this._root.querySelector('[data-field="target_1"]').value = entity1.target ?? "";
-    this._root.querySelector('[data-field="unit_1"]').value =
-      entity1.unit_of_measurement ?? "";
-    this._root.querySelector('[data-field="decimal_1"]').value =
-      entity1.decimal_places ?? "";
-    const title = this._root.querySelector('[data-field="title"]');
-    const showZeroMarker = this._root.querySelector('[data-field="show_zero_marker"]');
-    const progressColor = this._root.querySelector('[data-field="progress_color"]');
-    const style = this._root.querySelector('[data-field="style"]');
-    const transparent = this._root.querySelector('[data-field="transparent"]');
-    title.value = this._config.title || "";
-    showZeroMarker.checked = Boolean(this._config.show_zero_marker);
-    progressColor.value = this._config.progress_color || "";
-    style.value = this._config.style ?? 1;
-    transparent.checked = Boolean(this._config.transparent);
-  }
-
-  _valueChanged(ev) {
-    const target = ev.target;
-    if (!this._config || !target.dataset.field) return;
-    const field = target.dataset.field;
-    const value =
-      target.tagName === "HA-SWITCH"
-        ? target.checked
-        : ev.detail?.value ?? target.value;
-
-    const entityFieldMatch = field.match(/^(entity|min|max|target|unit|decimal)_(\d+)$/);
-    if (entityFieldMatch) {
-      const key = entityFieldMatch[1];
-      const index = Number(entityFieldMatch[2]);
-      const entities = Array.isArray(this._config.entities)
-        ? [...this._config.entities]
-        : [];
-      while (entities.length <= index) {
-        entities.push({
-          entity: "",
-          min: 0,
-          max: 100,
-          target: "",
-          unit_of_measurement: "",
-          decimal_places: null,
-        });
-      }
-      const mappedKey = key === "unit" ? "unit_of_measurement" : key === "decimal" ? "decimal_places" : key;
-      entities[index] = { ...entities[index], [mappedKey]: value };
-      this._config = { ...this._config, entities };
-    } else {
-      this._config = { ...this._config, [field]: value };
-    }
-    this._fireConfigChanged();
-  }
-
-  _fireConfigChanged() {
-    this.dispatchEvent(
-      new CustomEvent("config-changed", {
-        detail: { config: this._config },
-        bubbles: true,
-        composed: true,
-      })
-    );
-  }
-}
-
-customElements.define("sections-gauge-card-editor", SectionsGaugeCardEditor);

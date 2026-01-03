@@ -32,6 +32,7 @@ The configuration UI is currently in development, so it is better to manually en
 | Progress Color | `progress_color` | Override the color of the gauge, use HEX `#FFFFFF`, RGB `rgb(123,456,789)`, or VAR `var(--ha-css-var)` |
 | Gauge Style | `style` | `1` or `2` for different UI styles for the gauge |
 | Zero Markers | `show_zero_marker` | Set to `true` if you want the a marker at point `0` on the gauge |
+| Hide State Labels | `hide_state_labels` | Set to `true` if you want the gauge value labels to hide |
 | Gauge Name | `title` | String you want to show for the name of the gauge |
 
 ### Entity Level settings
