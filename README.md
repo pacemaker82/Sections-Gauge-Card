@@ -45,6 +45,7 @@ Entities can be used to set a number of fields so that they are more dynamic. Fo
 | Minimum Value | `min` | Integer, Float or Entity ID of the minimum value of the gauge. Supports +/- |
 | Maximum Value | `max` | Integer, Float or Entity ID of the maximum value of the gauge. Supports +/- |
 | Target Value | `target` | Integer, Float or Entity ID of a target value for the gauge |
+| Peak Value | `peak` | Integer, Float or Entity ID of a peak value for the gauge (renders as a marker line) |
 | Decimal Places | `decimal_places` | Number of decimal places you want to show for the entity |
 | Unit of Measurement | `unit_of_measurement` | String to override the unit of measurement |
 
@@ -57,6 +58,7 @@ entities:
     min: 0
     max: 5000
     target: sensor.pv_forecast_now_power
+    peak: sensor.pv_power_peak
     decimal_places: 2
     unit_of_measurement: Watts
   - entity: sensor.pv_energy_today_kwh

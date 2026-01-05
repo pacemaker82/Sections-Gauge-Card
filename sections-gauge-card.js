@@ -50,6 +50,10 @@ class SectionsGaugeCard extends HTMLElement {
                   label: "Target (number or entity)",
                   selector: { text: {} },
                 },
+                peak: {
+                  label: "Peak (number or entity)",
+                  selector: { text: {} },
+                },
                 min: { 
                   label: "Minimum Guage Value (number or entity)",
                   selector: { text: {} },
@@ -95,6 +99,7 @@ class SectionsGaugeCard extends HTMLElement {
           min: 0,
           max: 100,
           target: "",
+          peak: "",
           unit_of_measurement: "",
           decimal_places: null,
         },
@@ -117,6 +122,7 @@ class SectionsGaugeCard extends HTMLElement {
           min: normalized.min ?? 0,
           max: normalized.max ?? 100,
           target: normalized.target ?? "",
+          peak: normalized.peak ?? "",
           unit_of_measurement: "",
           decimal_places: normalized.decimal_places ?? null,
         },
@@ -302,6 +308,33 @@ class SectionsGaugeCard extends HTMLElement {
           fill: none;
           stroke-linecap: round;
         }
+        .target-arc,
+        .target-arc-outline {
+          fill: none;
+          stroke-linecap: round;
+          display: none;
+          transition: stroke-dasharray 0.6s ease, stroke-dashoffset 0.6s ease;
+          transform-origin: 50px 50px;
+        }
+        .target-arc {
+          stroke: var(--secondary-text-color);
+          stroke-width: 12;
+          stroke-opacity: 0.5;
+        }
+        .target-arc-outline {
+          stroke: var(--progress-color, var(--primary-color));
+          stroke-width: 14;
+        }
+        .peak-marker {
+          fill: none;
+          opacity: 0.5;
+          stroke: var(--progress-color, var(--primary-color));
+          stroke-width: 2;
+          stroke-linecap: round;
+          display: none;
+          transition: transform 0.6s ease, stroke 0.3s ease;
+          transform-origin: 50px 50px;
+        }
         .zero-marker {
           fill: var(--card-background-color);
           display: none;
@@ -322,7 +355,8 @@ class SectionsGaugeCard extends HTMLElement {
           stroke-width: 14;
           fill: none;
           stroke-linecap: round;
-          transition: stroke-dasharray 0.6s ease, stroke-dashoffset 0.6s ease;
+          transition: stroke-dasharray 0.6s ease, stroke-dashoffset 0.6s ease,
+            stroke 0.3s ease;
           transform-origin: 50px 50px;
         }
         .progress.secondary {
@@ -332,7 +366,7 @@ class SectionsGaugeCard extends HTMLElement {
           stroke: var(--progress-color, var(--primary-color));
           stroke-width: 1;
           display: none;
-          transition: transform 0.6s ease;
+          transition: transform 0.6s ease, fill 0.3s ease, stroke 0.3s ease;
           transform-origin: 50px 50px;
         }
         @supports (color: color-mix(in srgb, black, white)) {
@@ -355,7 +389,7 @@ class SectionsGaugeCard extends HTMLElement {
           stroke: none;
         }
         :host([data-style="2"]) .progress:not(.secondary) {
-          stroke-opacity: 0.5;
+          stroke-opacity: 0.8;
         }
         :host([data-style="2"]) .knob {
           display: block;
@@ -366,8 +400,27 @@ class SectionsGaugeCard extends HTMLElement {
         :host([data-has-secondary-zero="true"]) .zero-marker.secondary {
           display: block;
         }
+        :host([data-has-target="true"]) .target-arc:not(.secondary),
+        :host([data-has-target="true"]) .target-arc-outline:not(.secondary) {
+          display: block;
+        }
+        :host([data-has-secondary-target="true"]) .target-arc.secondary,
+        :host([data-has-secondary-target="true"]) .target-arc-outline.secondary {
+          display: block;
+        }
+        :host([data-has-peak="true"]) .peak-marker:not(.secondary) {
+          display: block;
+        }
+        :host([data-has-secondary-peak="true"]) .peak-marker.secondary {
+          display: block;
+        }
         :host([data-has-target="true"]) .target {
           display: block;
+        }
+        :host([data-target-reached="true"]) .target,
+        :host([data-target-reached="true"]) .target-arc,
+        :host([data-target-reached="true"]) .target-arc-outline {
+          display: none;
         }
         :host([data-target-reached="true"]) .target:not(.secondary) {
           fill: var(--progress-color, var(--primary-color));
@@ -376,10 +429,30 @@ class SectionsGaugeCard extends HTMLElement {
         :host([data-secondary-target-reached="true"]) .target.secondary {
           fill: var(--progress-color, var(--primary-color));
         }
-        :host([data-has-secondary="true"]) .secondary {
+        :host([data-secondary-target-reached="true"]) .target.secondary,
+        :host([data-secondary-target-reached="true"]) .target-arc.secondary,
+        :host([data-secondary-target-reached="true"]) .target-arc-outline.secondary {
+          display: none;
+        }
+        :host([data-has-secondary="true"]) .progress.secondary,
+        :host([data-has-secondary="true"]) .knob.secondary,
+        :host([data-has-secondary="true"]) .target.secondary {
           display: block;
         }
+        :host([data-secondary-target-reached="true"]) .target.secondary,
+        :host([data-secondary-target-reached="true"]) .target-arc.secondary,
+        :host([data-secondary-target-reached="true"]) .target-arc-outline.secondary {
+          display: none;
+        }
         @supports (color: color-mix(in srgb, black, white)) {
+          .target-arc {
+            stroke: color-mix(
+              in srgb,
+              var(--secondary-text-color) 20%,
+              black
+            );
+            stroke-opacity: 1;
+          }
           :host([data-style="1"]) .progress.secondary {
             stroke: color-mix(
               in srgb,
@@ -436,14 +509,21 @@ class SectionsGaugeCard extends HTMLElement {
           <svg viewBox="0 0 100 100" aria-hidden="true">
             <g class="arc">
               <circle class="track"></circle>
-              <circle class="progress"></circle>
-              <circle class="progress secondary"></circle>   
-              <polygon class="zero-marker"></polygon>
-              <polygon class="zero-marker secondary"></polygon>
-              <circle class="target secondary"></circle>
+              <line class="peak-marker secondary"></line>
+              <line class="peak-marker"></line>              
+              <circle class="target-arc-outline"></circle>
+              <circle class="target-arc"></circle>
+              <circle class="target-arc-outline secondary"></circle>
+              <circle class="target-arc secondary"></circle>
               <circle class="target"></circle>
-              <circle class="knob secondary"></circle>
+              <circle class="target secondary"></circle>
+              <circle class="progress"></circle>
+              <circle class="progress secondary"></circle>  
+              <circle class="knob secondary"></circle>              
+              <circle class="target secondary"></circle>              
               <circle class="knob"></circle>              
+              <polygon class="zero-marker"></polygon>
+              <polygon class="zero-marker secondary"></polygon>              
             </g>
           </svg>
           <div class="value"></div>
@@ -455,6 +535,12 @@ class SectionsGaugeCard extends HTMLElement {
     this._card.addEventListener("click", () => this._openMoreInfo());
     this._arcGroup = this._root.querySelector(".arc");
     this._track = this._root.querySelector(".track");
+    this._targetArc = this._root.querySelector(".target-arc:not(.secondary)");
+    this._targetArcSecondary = this._root.querySelector(".target-arc.secondary");
+    this._targetArcOutline = this._root.querySelector(".target-arc-outline:not(.secondary)");
+    this._targetArcSecondaryOutline = this._root.querySelector(".target-arc-outline.secondary");
+    this._peakMarker = this._root.querySelector(".peak-marker:not(.secondary)");
+    this._peakMarkerSecondary = this._root.querySelector(".peak-marker.secondary");
     this._zeroMarker = this._root.querySelector(".zero-marker:not(.secondary)");
     this._zeroMarkerSecondary = this._root.querySelector(".zero-marker.secondary");
     this._target = this._root.querySelector(".target:not(.secondary)");
@@ -466,6 +552,11 @@ class SectionsGaugeCard extends HTMLElement {
     this._valueEl = this._root.querySelector(".value");
     this._titleEl = this._root.querySelector(".title");
     this._wrapper = this._root.querySelector(".wrapper");
+    const svgNS = "http://www.w3.org/2000/svg";
+    this._targetTitle = document.createElementNS(svgNS, "title");
+    this._target.appendChild(this._targetTitle);
+    this._targetSecondaryTitle = document.createElementNS(svgNS, "title");
+    this._targetSecondary.appendChild(this._targetSecondaryTitle);
     this._resizeObserver = new ResizeObserver((entries) => {
       const entry = entries[0];
       if (!entry) return;
@@ -573,6 +664,32 @@ class SectionsGaugeCard extends HTMLElement {
     this._track.setAttribute("stroke-dasharray", `${arcLength} ${gapLength}`);
     this._track.setAttribute("stroke-dashoffset", "0");
 
+    this._targetArc.setAttribute("cx", center);
+    this._targetArc.setAttribute("cy", center);
+    this._targetArc.setAttribute("r", radius);
+    const targetArcStrokeWidth = 12;
+    this._targetArc.setAttribute("stroke-width", targetArcStrokeWidth);
+    this._targetArc.style.strokeWidth = `${targetArcStrokeWidth}`;
+    this._targetArc.setAttribute("stroke-dashoffset", "0");
+    this._targetArc.style.transform = progressTransform;
+    this._targetArcOutline.setAttribute("cx", center);
+    this._targetArcOutline.setAttribute("cy", center);
+    this._targetArcOutline.setAttribute("r", radius);
+    const targetArcOutlineWidth = 14;
+    this._targetArcOutline.setAttribute("stroke-width", targetArcOutlineWidth);
+    this._targetArcOutline.style.strokeWidth = `${targetArcOutlineWidth}`;
+    this._targetArcOutline.setAttribute("stroke-dashoffset", "0");
+    this._targetArcOutline.style.transform = progressTransform;
+
+    const peakMarkerStroke = 2;
+    const peakMarkerInset = peakMarkerStroke / 2;
+    const peakMarkerInner = radius - strokeWidth / 2 + peakMarkerInset;
+    const peakMarkerOuter = radius + strokeWidth / 2 - peakMarkerInset;
+    this._peakMarker.setAttribute("x1", center + peakMarkerInner);
+    this._peakMarker.setAttribute("y1", center);
+    this._peakMarker.setAttribute("x2", center + peakMarkerOuter);
+    this._peakMarker.setAttribute("y2", center);
+
     this._target.setAttribute("r", strokeWidth * 0.3);
     this._target.setAttribute("cx", center + radius);
     this._target.setAttribute("cy", center);
@@ -639,6 +756,8 @@ class SectionsGaugeCard extends HTMLElement {
         ? "—"
         : this._formatValue(value, primaryConfig.decimal_places);
     const primaryLabel = `${displayValue}${unit}`;
+    const isZero =
+      value !== null && this._parseNumber(displayValue) === 0;
     let secondaryDisplay = "";
     let secondaryValueText = "";
     let secondaryUnit = "";
@@ -713,26 +832,79 @@ class SectionsGaugeCard extends HTMLElement {
     this._card.classList.toggle("transparent", Boolean(this._config.transparent));
     const style = Number(this._config.style) || 1;
     this.setAttribute("data-style", style);
-    if (this._config.progress_color) {
+    const hasProgressColor = Boolean(this._config.progress_color);
+    if (hasProgressColor) {
       this.style.setProperty("--progress-color", this._config.progress_color);
-      this._progress.style.stroke = this._config.progress_color;
     } else {
       this.style.removeProperty("--progress-color");
-      this._progress.style.removeProperty("stroke");
+    }
+    if (isZero) {
+      this._progress.style.stroke = "var(--divider-color)";
+      this._knob.style.fill = "var(--divider-color)";
+      this._knob.style.stroke = "var(--divider-color)";
+    } else {
+      if (hasProgressColor) {
+        this._progress.style.stroke = this._config.progress_color;
+      } else {
+        this._progress.style.removeProperty("stroke");
+      }
+      this._knob.style.removeProperty("fill");
+      this._knob.style.removeProperty("stroke");
     }
 
     const targetValue = this._resolveMinMax(primaryConfig.target, null);
     if (targetValue === null) {
       this.setAttribute("data-has-target", "false");
       this.setAttribute("data-target-reached", "false");
+      if (this._targetTitle) this._targetTitle.textContent = "";
     } else {
-      const targetClamped = Math.min(Math.max(targetValue, min), primaryMetrics.safeMax);
+      const targetMetrics = computeMetrics(targetValue, min, max, arcLength);
+      this._targetArc.setAttribute(
+        "stroke-dasharray",
+        `${targetMetrics.progressLength} ${circumference}`
+      );
+      this._targetArc.setAttribute(
+        "stroke-dashoffset",
+        `${targetMetrics.progressDashOffset}`
+      );
+      this._targetArcOutline.setAttribute(
+        "stroke-dasharray",
+        `${targetMetrics.progressLength} ${circumference}`
+      );
+      this._targetArcOutline.setAttribute(
+        "stroke-dashoffset",
+        `${targetMetrics.progressDashOffset}`
+      );
+      const targetClamped = Math.min(
+        Math.max(targetValue, min),
+        primaryMetrics.safeMax
+      );
       const targetRatio = (targetClamped - min) / (primaryMetrics.safeMax - min);
       const targetAngle = sweepAngle * targetRatio;
       this._target.style.transform = `rotate(${targetAngle}deg)`;
-      this.setAttribute("data-has-target", "true");
       const reached = value !== null && value >= targetValue;
       this.setAttribute("data-target-reached", reached ? "true" : "false");
+      this.setAttribute("data-has-target", reached ? "false" : "true");
+      if (this._targetTitle) {
+        const targetDisplay = this._formatValue(
+          targetValue,
+          primaryConfig.decimal_places
+        );
+        const unitSuffix = unit ? ` ${unit}` : "";
+        this._targetTitle.textContent = `Target: ${targetDisplay}${unitSuffix}`;
+      }
+    }
+
+    const peakValue = this._resolveMinMax(primaryConfig.peak, null);
+    if (peakValue === null) {
+      this.removeAttribute("data-has-peak");
+      this._peakMarker.style.transform = "";
+    } else {
+      const peakClamped = Math.min(Math.max(peakValue, min), primaryMetrics.safeMax);
+      const peakRatio = (peakClamped - min) / (primaryMetrics.safeMax - min);
+      const peakAngle = sweepAngle * peakRatio;
+      this._peakMarker.style.transform = `rotate(${peakAngle}deg)`;
+      this.setAttribute("data-has-peak", "true");
     }
 
     if (hasSecondaryEntity) {
@@ -742,6 +914,8 @@ class SectionsGaugeCard extends HTMLElement {
         this.setAttribute("data-has-secondary", "false");
         this.setAttribute("data-secondary-target-reached", "false");
         this.setAttribute("data-has-secondary-zero", "false");
+        this.removeAttribute("data-has-secondary-peak");
+        this.setAttribute("data-has-secondary-target", "false");
       } else {
         const secondaryStrokeWidth = strokeWidth * 0.4;
         const secondaryRadius = radius;
@@ -787,6 +961,37 @@ class SectionsGaugeCard extends HTMLElement {
         );
         this._progressSecondary.style.transform = progressTransform;
 
+        this._targetArcSecondary.setAttribute("cx", center);
+        this._targetArcSecondary.setAttribute("cy", center);
+        this._targetArcSecondary.setAttribute("r", secondaryRadius);
+        const secondaryTargetArcWidth = Math.max(1, secondaryStrokeWidth - 2);
+        this._targetArcSecondary.setAttribute("stroke-width", secondaryTargetArcWidth);
+        this._targetArcSecondary.style.strokeWidth = `${secondaryTargetArcWidth}`;
+        this._targetArcSecondary.setAttribute("stroke-dashoffset", "0");
+        this._targetArcSecondary.style.transform = progressTransform;
+        this._targetArcSecondaryOutline.setAttribute("cx", center);
+        this._targetArcSecondaryOutline.setAttribute("cy", center);
+        this._targetArcSecondaryOutline.setAttribute("r", secondaryRadius);
+        const secondaryTargetArcOutlineWidth = secondaryStrokeWidth;
+        this._targetArcSecondaryOutline.setAttribute(
+          "stroke-width",
+          secondaryTargetArcOutlineWidth
+        );
+        this._targetArcSecondaryOutline.style.strokeWidth = `${secondaryTargetArcOutlineWidth}`;
+        this._targetArcSecondaryOutline.setAttribute("stroke-dashoffset", "0");
+        this._targetArcSecondaryOutline.style.transform = progressTransform;
+
+        const secondaryPeakMarkerStroke = 2;
+        const secondaryPeakMarkerInset = secondaryPeakMarkerStroke / 2;
+        const secondaryPeakMarkerInner =
+          secondaryRadius - secondaryStrokeWidth / 2 + secondaryPeakMarkerInset;
+        const secondaryPeakMarkerOuter =
+          secondaryRadius + secondaryStrokeWidth / 2 - secondaryPeakMarkerInset;
+        this._peakMarkerSecondary.setAttribute("x1", center + secondaryPeakMarkerInner);
+        this._peakMarkerSecondary.setAttribute("y1", center);
+        this._peakMarkerSecondary.setAttribute("x2", center + secondaryPeakMarkerOuter);
+        this._peakMarkerSecondary.setAttribute("y2", center);
+
         this._knobSecondary.setAttribute("r", secondaryStrokeWidth / 2);
         this._knobSecondary.setAttribute("cx", center + secondaryRadius);
         this._knobSecondary.setAttribute("cy", center);
@@ -797,7 +1002,31 @@ class SectionsGaugeCard extends HTMLElement {
         if (targetValue2 === null) {
           this._targetSecondary.style.display = "none";
           this.setAttribute("data-secondary-target-reached", "false");
+          this.setAttribute("data-has-secondary-target", "false");
+          if (this._targetSecondaryTitle) this._targetSecondaryTitle.textContent = "";
         } else {
+          const targetMetrics2 = computeMetrics(
+            targetValue2,
+            min2,
+            max2,
+            secondaryArcLength
+          );
+          this._targetArcSecondary.setAttribute(
+            "stroke-dasharray",
+            `${targetMetrics2.progressLength} ${secondaryCircumference}`
+          );
+          this._targetArcSecondary.setAttribute(
+            "stroke-dashoffset",
+            `${targetMetrics2.progressDashOffset}`
+          );
+          this._targetArcSecondaryOutline.setAttribute(
+            "stroke-dasharray",
+            `${targetMetrics2.progressLength} ${secondaryCircumference}`
+          );
+          this._targetArcSecondaryOutline.setAttribute(
+            "stroke-dashoffset",
+            `${targetMetrics2.progressDashOffset}`
+          );
           const targetClamped2 = Math.min(
             Math.max(targetValue2, min2),
             secondaryMetrics.safeMax
@@ -809,9 +1038,34 @@ class SectionsGaugeCard extends HTMLElement {
           this._targetSecondary.setAttribute("cx", center + secondaryRadius);
           this._targetSecondary.setAttribute("cy", center);
           this._targetSecondary.style.transform = `rotate(${targetAngle2}deg)`;
-          this._targetSecondary.style.display = "block";
           const reached2 = value2 !== null && value2 >= targetValue2;
+          this._targetSecondary.style.display = reached2 ? "none" : "block";
           this.setAttribute("data-secondary-target-reached", reached2 ? "true" : "false");
+          this.setAttribute("data-has-secondary-target", reached2 ? "false" : "true");
+          if (this._targetSecondaryTitle) {
+            const targetDisplay2 = this._formatValue(
+              targetValue2,
+              secondaryConfig.decimal_places
+            );
+            const unitSuffix2 = secondaryUnit ? ` ${secondaryUnit}` : "";
+            this._targetSecondaryTitle.textContent = `Target: ${targetDisplay2}${unitSuffix2}`;
+          }
+        }
+
+        const peakValue2 = this._resolveMinMax(secondaryConfig.peak, null);
+        if (peakValue2 === null) {
+          this.removeAttribute("data-has-secondary-peak");
+          this._peakMarkerSecondary.style.transform = "";
+        } else {
+          const peakClamped2 = Math.min(
+            Math.max(peakValue2, min2),
+            secondaryMetrics.safeMax
+          );
+          const peakRatio2 =
+            (peakClamped2 - min2) / (secondaryMetrics.safeMax - min2);
+          const peakAngle2 = sweepAngle * peakRatio2;
+          this._peakMarkerSecondary.style.transform = `rotate(${peakAngle2}deg)`;
+          this.setAttribute("data-has-secondary-peak", "true");
         }
 
         this.setAttribute("data-has-secondary", "true");
@@ -820,6 +1074,8 @@ class SectionsGaugeCard extends HTMLElement {
       this.setAttribute("data-has-secondary", "false");
       this.setAttribute("data-secondary-target-reached", "false");
       this.setAttribute("data-has-secondary-zero", "false");
+      this.removeAttribute("data-has-secondary-peak");
+      this.setAttribute("data-has-secondary-target", "false");
     }
     // Title font size is fixed to --ha-font-size-m.
   }
