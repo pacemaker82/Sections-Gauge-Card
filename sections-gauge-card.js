@@ -278,6 +278,14 @@ class SectionsGaugeCard extends HTMLElement {
         :host([data-secondary-target-reached="true"]) .value .unit {
           color: var(--progress-color, var(--primary-color));
         }
+        :host([data-primary-zero="true"][data-has-secondary="true"]) .value .number,
+        :host([data-primary-zero="true"]:not([data-has-secondary="true"])) .value .number,
+        :host([data-primary-zero="true"]:not([data-has-secondary="true"])) .value .unit {
+          color: var(--divider-color);
+        }
+        :host([data-secondary-zero="true"][data-has-secondary="true"]) .value .unit {
+          color: var(--divider-color);
+        }
         .value .number {
           font-size: calc(var(--gauge-size, 160px) * 0.38);
         }
@@ -425,6 +433,29 @@ class SectionsGaugeCard extends HTMLElement {
         :host([data-target-reached="true"]) .target:not(.secondary) {
           fill: var(--progress-color, var(--primary-color));
           stroke: var(--primary-text-color);
+        }
+        :host([data-primary-zero="true"]) .target:not(.secondary) {
+          fill: var(--divider-color);
+          stroke: var(--divider-color);
+        }
+        :host([data-primary-zero="true"]) .target-arc:not(.secondary),
+        :host([data-primary-zero="true"]) .target-arc-outline:not(.secondary),
+        :host([data-primary-zero="true"]) .peak-marker:not(.secondary) {
+          stroke: var(--divider-color);
+        }
+        :host([data-secondary-zero="true"]) .progress.secondary {
+          stroke: var(--divider-color);
+        }
+        :host([data-secondary-zero="true"]) .knob.secondary {
+          fill: var(--divider-color);
+        }
+        :host([data-secondary-zero="true"]) .target.secondary {
+          fill: var(--divider-color);
+        }
+        :host([data-secondary-zero="true"]) .target-arc.secondary,
+        :host([data-secondary-zero="true"]) .target-arc-outline.secondary,
+        :host([data-secondary-zero="true"]) .peak-marker.secondary {
+          stroke: var(--divider-color);
         }
         :host([data-secondary-target-reached="true"]) .target.secondary {
           fill: var(--progress-color, var(--primary-color));
@@ -761,6 +792,7 @@ class SectionsGaugeCard extends HTMLElement {
     let secondaryDisplay = "";
     let secondaryValueText = "";
     let secondaryUnit = "";
+    let isSecondaryZero = false;
     if (hasSecondaryEntity && secondaryState) {
       const value2 = this._parseNumber(secondaryState.state);
       const unit2 =
@@ -774,6 +806,8 @@ class SectionsGaugeCard extends HTMLElement {
       secondaryValueText = displayValue2;
       secondaryUnit = unit2;
       secondaryDisplay = unit2 ? `${displayValue2}${unit2}` : displayValue2;
+      isSecondaryZero =
+        value2 !== null && this._parseNumber(displayValue2) === 0;
     }
     const primaryKey = `${displayValue}|${unit}`;
     const secondaryKey = `${secondaryDisplay}`;
@@ -829,6 +863,8 @@ class SectionsGaugeCard extends HTMLElement {
       "data-hide-labels",
       this._config.hide_state_labels ? "true" : "false"
     );
+    this.setAttribute("data-primary-zero", isZero ? "true" : "false");
+    this.setAttribute("data-secondary-zero", isSecondaryZero ? "true" : "false");
     this._card.classList.toggle("transparent", Boolean(this._config.transparent));
     const style = Number(this._config.style) || 1;
     this.setAttribute("data-style", style);
@@ -960,6 +996,15 @@ class SectionsGaugeCard extends HTMLElement {
           `${secondaryMetrics.progressDashOffset}`
         );
         this._progressSecondary.style.transform = progressTransform;
+        if (isSecondaryZero) {
+          this._progressSecondary.style.stroke = "var(--divider-color)";
+          this._knobSecondary.style.fill = "var(--divider-color)";
+          this._knobSecondary.style.stroke = "var(--divider-color)";
+        } else {
+          this._progressSecondary.style.removeProperty("stroke");
+          this._knobSecondary.style.removeProperty("fill");
+          this._knobSecondary.style.removeProperty("stroke");
+        }
 
         this._targetArcSecondary.setAttribute("cx", center);
         this._targetArcSecondary.setAttribute("cy", center);
