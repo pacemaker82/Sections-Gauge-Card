@@ -2,7 +2,7 @@
 
 ![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/pacemaker82/sections-gauge-card/total?label=Total%20Downloads) ![GitHub Downloads (all assets, latest release)](https://img.shields.io/github/downloads/pacemaker82/sections-gauge-card/latest/total?label=Latest%20Version)
 
-<img width="767" height="263" alt="Screenshot 2026-01-03 at 10 14 02" src="https://github.com/user-attachments/assets/0da74e5b-ff0d-49ca-bcf9-805d45316bba" />
+<img width="766" height="264" alt="Screenshot 2026-01-05 at 13 48 29" src="https://github.com/user-attachments/assets/47efcf02-3209-4ca7-aa1d-c69fb7d99d07" />
 
 A simple gauge card with multiple styles and support for multiple entities, targets and other customisations.
 
