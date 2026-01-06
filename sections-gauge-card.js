@@ -191,17 +191,6 @@ class SectionsGaugeCard extends HTMLElement {
           align-items: center;
           justify-content: space-between;
         }
-        ha-card.landscape {
-          flex-direction: row;
-          align-items: center;
-          justify-content: space-between;
-        }
-        ha-card.landscape.no-title {
-          justify-content: center;
-        }
-        ha-card.landscape.no-title .wrapper {
-          transform: translateY(calc(var(--pad-top, 4px) * 0.5));
-        }
         .wrapper {
           position: relative;
           display: flex;
@@ -232,26 +221,6 @@ class SectionsGaugeCard extends HTMLElement {
           bottom: 2px;
           height: var(--portrait-title-height, auto);
           line-height: var(--portrait-title-height, auto);
-        }
-        ha-card.landscape .wrapper {
-          margin-right: auto;
-          align-self: flex-start;
-        }
-        ha-card.landscape.no-title .wrapper {
-          align-self: center;
-          margin: 0 auto;
-          margin-right: 0;
-          margin-left: 0;
-          margin-top: var(--pad-top, 4px);
-        }
-        ha-card.landscape .title {
-          width: var(--title-width, 120px);
-          text-align: center;
-          right: clamp(4px, calc(var(--gauge-size, 160px) * 0.04), 12px);
-          top: 50%;
-          transform: translateY(-50%);
-          white-space: normal;
-          word-break: break-word;
         }
         .value {
           position: absolute;
@@ -1141,8 +1110,8 @@ class SectionsGaugeCard extends HTMLElement {
     if (!this._card || !this._wrapper || !width || !height) return;
     const isLandscape = width > height * 1.1;
     const hasTitle = (this._config?.title || "").trim().length > 0;
-    this._card.classList.toggle("landscape", isLandscape);
-    this._card.classList.toggle("portrait", !isLandscape);
+    this._card.classList.toggle("landscape", false);
+    this._card.classList.toggle("portrait", true);
     this._card.classList.toggle("has-title", hasTitle);
     this._card.classList.toggle("no-title", !hasTitle);
 
@@ -1177,22 +1146,13 @@ class SectionsGaugeCard extends HTMLElement {
     if (this._hasFittedValue) {
       this._fitValueText();
     }
-    if (isLandscape && hasTitle) {
-      const titleWidth = Math.max(0, width - (padLeft + size + 2 + 4));
-      this.style.setProperty("--title-width", `${titleWidth}px`);
-      this.style.removeProperty("--portrait-title-height");
+    this.style.removeProperty("--title-width");
+    if (hasTitle) {
+      const portraitHeight = Math.max(0, height - (padTop + size + 2 + 2));
+      const safeHeight = Math.max(portraitHeight, 22);
+      this.style.setProperty("--portrait-title-height", `${safeHeight}px`);
     } else {
-      this.style.removeProperty("--title-width");
-      if (hasTitle) {
-        const portraitHeight = Math.max(
-          0,
-          height - (padTop + size + 2 + 2)
-        );
-        const safeHeight = Math.max(portraitHeight, 22);
-        this.style.setProperty("--portrait-title-height", `${safeHeight}px`);
-      } else {
-        this.style.removeProperty("--portrait-title-height");
-      }
+      this.style.removeProperty("--portrait-title-height");
     }
     this._layoutReady = true;
     if (this._hass && this._config) {
