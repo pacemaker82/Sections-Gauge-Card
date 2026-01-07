@@ -74,15 +74,20 @@ title: Label
 
 ## Examples
 
-<img width="255" height="97" alt="Screenshot 2026-01-03 at 10 32 02" src="https://github.com/user-attachments/assets/e7fb82a1-8fc6-4d96-bbc2-f8129f5a42df" />
+<img width="257" height="196" alt="Screenshot 2026-01-07 at 12 12 44" src="https://github.com/user-attachments/assets/23d39b58-cc73-4c66-8665-91b97875ecca" />
 
 A card showing positive and negative values.
 ```yaml
 type: custom:sections-gauge-card
 entities:
-  - entity: input_number.test_battery_power
+  - entity: input_number.test_grid_power
     min: -3000
     max: 3000
+title: Grid
+transparent: false
+style: "1"
+decimal_places: null
+show_zero_marker: true
 ```
 
 <img width="263" height="179" alt="Screenshot 2026-01-03 at 10 34 41" src="https://github.com/user-attachments/assets/fc584464-c14f-49a6-946a-f0c59677e81b" />
