@@ -1108,7 +1108,6 @@ class SectionsGaugeCard extends HTMLElement {
 
   _updateGaugeSize(width, height) {
     if (!this._card || !this._wrapper || !width || !height) return;
-    const isLandscape = width > height * 1.1;
     const hasTitle = (this._config?.title || "").trim().length > 0;
     this._card.classList.toggle("landscape", false);
     this._card.classList.toggle("portrait", true);
@@ -1132,10 +1131,18 @@ class SectionsGaugeCard extends HTMLElement {
     const paddingY = padTop + padBottom;
     const availableWidth = Math.max(0, width - paddingX);
     const availableHeight = Math.max(0, height - paddingY);
-    const baseSize = Math.min(availableWidth, availableHeight);
-    let scale = 1;
-    if (isLandscape) scale = 1.12;
-    const size = Math.max(0, baseSize * scale);
+    const titleHeight = hasTitle ? this._getTitleHeight() : 0;
+    const titleOverlapRatio = 0.5;
+    const effectiveTitleHeight = titleHeight * (1 - titleOverlapRatio);
+    let size = Math.min(availableWidth, availableHeight);
+    if (
+      hasTitle &&
+      titleHeight > 0 &&
+      availableHeight < size + effectiveTitleHeight
+    ) {
+      size = Math.max(0, availableHeight - effectiveTitleHeight);
+    }
+    size = Math.max(0, size);
     if (!size) return;
     if (this._lastGaugeSize && Math.abs(this._lastGaugeSize - size) < 0.5) {
       return;
@@ -1147,10 +1154,8 @@ class SectionsGaugeCard extends HTMLElement {
       this._fitValueText();
     }
     this.style.removeProperty("--title-width");
-    if (hasTitle) {
-      const portraitHeight = Math.max(0, height - (padTop + size + 2 + 2));
-      const safeHeight = Math.max(portraitHeight, 22);
-      this.style.setProperty("--portrait-title-height", `${safeHeight}px`);
+    if (hasTitle && titleHeight > 0) {
+      this.style.setProperty("--portrait-title-height", `${titleHeight}px`);
     } else {
       this.style.removeProperty("--portrait-title-height");
     }
@@ -1158,6 +1163,21 @@ class SectionsGaugeCard extends HTMLElement {
     if (this._hass && this._config) {
       this._render();
     }
+  }
+
+  _getTitleHeight() {
+    if (!this._titleEl) return 0;
+    let measured = 0;
+    const rect = this._titleEl.getBoundingClientRect();
+    if (rect && rect.height) measured = rect.height;
+    const style = getComputedStyle(this._titleEl);
+    const fontSize = parseFloat(style.fontSize) || 0;
+    const lineHeight = parseFloat(style.lineHeight);
+    if (!measured) {
+      if (Number.isFinite(lineHeight)) measured = lineHeight;
+      else measured = fontSize;
+    }
+    return Math.max(0, Math.ceil(measured));
   }
 
   _fitValueText() {
