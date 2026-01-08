@@ -8,6 +8,8 @@ A simple gauge card with multiple styles and support for multiple entities, targ
 
 ## Installation
 
+Search for `Sections Gauge Card` on the HACS store. If you can't find it, follow these instructions:
+
 1. Goto HACS (if you dont have that installed, install HACS)
 2. Add a custom repository
 3. Add the URL to this repo: `https://github.com/pacemaker82/Sections-Gauge-Card` using the category `Dashboard` (used to be `Lovelace` pre HACS 2.0.0)
