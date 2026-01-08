@@ -1,5 +1,13 @@
 class SectionsGaugeCard extends HTMLElement {
 
+  getGridOptions() {
+
+    return {
+      rows: 3,
+      columns: 6
+    };
+  }  
+
   static getConfigForm() {
     return {
       schema: [ 
@@ -32,6 +40,10 @@ class SectionsGaugeCard extends HTMLElement {
               },       
           ]
         }, 
+        {
+            name: "title",
+            selector: { text: {} },
+        },          
         {
             name: "progress_color",
             selector: { text: {} },
@@ -79,6 +91,7 @@ class SectionsGaugeCard extends HTMLElement {
         if (schema.name === "transparent") return "Make card transparent?";
         if (schema.name === "show_zero_marker") return "Show Zero Marker?";
         if (schema.name === "hide_state_labels") return "Hide State Labels?";
+        if (schema.name === "title") return "Gauge Label";
         return undefined;
       },
       computeHelper: (schema) => {
@@ -147,6 +160,8 @@ class SectionsGaugeCard extends HTMLElement {
     this._layoutReady = false;
     this._layoutVersion = 0;
     this._lastFitLayoutVersion = 0;
+    this._heightIsAuto = false;
+    this._lastPaddingY = 0;
     this._ensureCard();
     this._render();
   }
@@ -561,12 +576,25 @@ class SectionsGaugeCard extends HTMLElement {
       const entry = entries[0];
       if (!entry) return;
       const { width, height } = entry.contentRect;
+      const widthChanged =
+        !this._lastResize || Math.abs(this._lastResize.width - width) >= 0.5;
+      const heightChanged =
+        !this._lastResize || Math.abs(this._lastResize.height - height) >= 0.5;
       if (
         this._lastResize &&
         Math.abs(this._lastResize.width - width) < 0.5 &&
         Math.abs(this._lastResize.height - height) < 0.5
       ) {
         return;
+      }
+      if (
+        !widthChanged &&
+        heightChanged &&
+        this._lastGaugeSize &&
+        this._lastPaddingY &&
+        Math.abs(height - (this._lastGaugeSize + this._lastPaddingY)) < 1
+      ) {
+        this._heightIsAuto = true;
       }
       this._lastResize = { width, height };
       this._updateGaugeSize(width, height);
@@ -1107,14 +1135,14 @@ class SectionsGaugeCard extends HTMLElement {
   }
 
   _updateGaugeSize(width, height) {
-    if (!this._card || !this._wrapper || !width || !height) return;
+    if (!this._card || !this._wrapper || !width) return;
     const hasTitle = (this._config?.title || "").trim().length > 0;
     this._card.classList.toggle("landscape", false);
     this._card.classList.toggle("portrait", true);
     this._card.classList.toggle("has-title", hasTitle);
     this._card.classList.toggle("no-title", !hasTitle);
 
-    const base = Math.min(width, height);
+    const base = width;
     const padBase = base * 0.02;
     const padTop = Math.min(6, Math.max(4, padBase));
     const padLeft = Math.min(6, Math.max(4, padBase));
@@ -1134,8 +1162,12 @@ class SectionsGaugeCard extends HTMLElement {
     const titleHeight = hasTitle ? this._getTitleHeight() : 0;
     const titleOverlapRatio = 0.5;
     const effectiveTitleHeight = titleHeight * (1 - titleOverlapRatio);
-    let size = Math.min(availableWidth, availableHeight);
+    let size = this._heightIsAuto
+      ? availableWidth
+      : Math.min(availableWidth, availableHeight);
     if (
+      !this._heightIsAuto &&
+      height &&
       hasTitle &&
       titleHeight > 0 &&
       availableHeight < size + effectiveTitleHeight
@@ -1148,6 +1180,7 @@ class SectionsGaugeCard extends HTMLElement {
       return;
     }
     this._lastGaugeSize = size;
+    this._lastPaddingY = paddingY;
     this._layoutVersion += 1;
     this.style.setProperty("--gauge-size", `${size}px`);
     if (this._hasFittedValue) {
