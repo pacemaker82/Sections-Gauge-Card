@@ -107,3 +107,5 @@ entities:
 transparent: true
 progress_color: var(--energy-solar-color)
 ```
+
+<img width="509" height="258" alt="Screenshot 2026-01-08 at 10 06 03" src="https://github.com/user-attachments/assets/0ae72c1b-ba1f-4b0f-a498-1a7918d6c1cc" />
