@@ -81,7 +81,7 @@ class SectionsGaugeCard extends HTMLElement {
                 unit_of_measurement: { 
                   label: "Unit of Measurement override",
                   selector: { text: {} },
-                },                                                                                                       
+                },
               },
             },
           },
@@ -115,6 +115,7 @@ class SectionsGaugeCard extends HTMLElement {
           peak: "",
           unit_of_measurement: "",
           decimal_places: null,
+          ranges: [],
         },
       ],
       title: "",
@@ -138,6 +139,7 @@ class SectionsGaugeCard extends HTMLElement {
           peak: normalized.peak ?? "",
           unit_of_measurement: "",
           decimal_places: normalized.decimal_places ?? null,
+          ranges: normalized.ranges ?? [],
         },
       ];
     }
@@ -257,10 +259,10 @@ class SectionsGaugeCard extends HTMLElement {
           display: none;
         }
         :host([data-target-reached="true"]) .value .number {
-          color: var(--progress-color, var(--primary-color));
+          color: var(--primary-progress-color, var(--progress-color, var(--primary-color)));
         }
         :host([data-secondary-target-reached="true"]) .value .unit {
-          color: var(--progress-color, var(--primary-color));
+          color: var(--secondary-progress-color, var(--primary-progress-color, var(--progress-color, var(--primary-color))));
         }
         :host([data-primary-zero="true"][data-has-secondary="true"]) .value .number,
         :host([data-primary-zero="true"]:not([data-has-secondary="true"])) .value .number,
@@ -314,18 +316,24 @@ class SectionsGaugeCard extends HTMLElement {
           stroke-opacity: 0.5;
         }
         .target-arc-outline {
-          stroke: var(--progress-color, var(--primary-color));
+          stroke: var(--primary-progress-color, var(--progress-color, var(--primary-color)));
           stroke-width: 14;
+        }
+        .target-arc-outline.secondary {
+          stroke: var(--secondary-progress-color, var(--primary-progress-color, var(--progress-color, var(--primary-color))));
         }
         .peak-marker {
           fill: none;
           opacity: 0.5;
-          stroke: var(--progress-color, var(--primary-color));
+          stroke: var(--primary-progress-color, var(--progress-color, var(--primary-color)));
           stroke-width: 2;
           stroke-linecap: round;
           display: none;
           transition: transform 0.6s ease, stroke 0.3s ease;
           transform-origin: 50px 50px;
+        }
+        .peak-marker.secondary {
+          stroke: var(--secondary-progress-color, var(--primary-progress-color, var(--progress-color, var(--primary-color))));
         }
         .zero-marker {
           fill: var(--card-background-color);
@@ -343,7 +351,7 @@ class SectionsGaugeCard extends HTMLElement {
           transform-origin: 50px 50px;
         }
         .progress {
-          stroke: var(--progress-color, var(--primary-color));
+          stroke: var(--primary-progress-color, var(--progress-color, var(--primary-color)));
           stroke-width: 14;
           fill: none;
           stroke-linecap: round;
@@ -352,10 +360,11 @@ class SectionsGaugeCard extends HTMLElement {
           transform-origin: 50px 50px;
         }
         .progress.secondary {
+          stroke: var(--secondary-progress-color, var(--primary-progress-color, var(--progress-color, var(--primary-color))));
         }
         .knob {
-          fill: var(--progress-color, var(--primary-color));
-          stroke: var(--progress-color, var(--primary-color));
+          fill: var(--primary-progress-color, var(--progress-color, var(--primary-color)));
+          stroke: var(--primary-progress-color, var(--progress-color, var(--primary-color)));
           stroke-width: 1;
           display: none;
           transition: transform 0.6s ease, fill 0.3s ease, stroke 0.3s ease;
@@ -365,18 +374,19 @@ class SectionsGaugeCard extends HTMLElement {
           .knob {
             stroke: color-mix(
               in srgb,
-              var(--progress-color, var(--primary-color)) 50%,
+              var(--primary-progress-color, var(--progress-color, var(--primary-color))) 50%,
               black
             );
           }
         }
         .knob.secondary {
+          fill: var(--secondary-progress-color, var(--primary-progress-color, var(--progress-color, var(--primary-color))));
           stroke: none;
           stroke-width: 0;
           display: none;
         }
         .target.secondary {
-          fill: var(--progress-color, var(--primary-color));
+          fill: var(--secondary-progress-color, var(--primary-progress-color, var(--progress-color, var(--primary-color))));
           display: none;
           stroke: none;
         }
@@ -415,7 +425,7 @@ class SectionsGaugeCard extends HTMLElement {
           display: none;
         }
         :host([data-target-reached="true"]) .target:not(.secondary) {
-          fill: var(--progress-color, var(--primary-color));
+          fill: var(--primary-progress-color, var(--progress-color, var(--primary-color)));
           stroke: var(--primary-text-color);
         }
         :host([data-primary-zero="true"]) .target:not(.secondary) {
@@ -442,7 +452,7 @@ class SectionsGaugeCard extends HTMLElement {
           stroke: var(--divider-color);
         }
         :host([data-secondary-target-reached="true"]) .target.secondary {
-          fill: var(--progress-color, var(--primary-color));
+          fill: var(--secondary-progress-color, var(--primary-progress-color, var(--progress-color, var(--primary-color))));
         }
         :host([data-secondary-target-reached="true"]) .target.secondary,
         :host([data-secondary-target-reached="true"]) .target-arc.secondary,
@@ -468,52 +478,40 @@ class SectionsGaugeCard extends HTMLElement {
             );
             stroke-opacity: 1;
           }
-          :host([data-style="1"]) .progress.secondary {
+          :host([data-secondary-range="false"][data-style="1"]) .progress.secondary,
+          :host([data-secondary-range="false"][data-style="2"]) .progress.secondary {
             stroke: color-mix(
               in srgb,
-              var(--progress-color, var(--primary-color)) 50%,
-              black
-            );
-          }         
-          :host([data-style="2"]) .progress.secondary {
-            stroke: color-mix(
-              in srgb,
-              var(--progress-color, var(--primary-color)) 50%,
+              var(--secondary-progress-color, var(--primary-progress-color, var(--progress-color, var(--primary-color)))) 50%,
               black
             );
           }
-          :host([data-style="1"]) .knob.secondary {
+          :host([data-secondary-range="false"][data-style="1"]) .knob.secondary,
+          :host([data-secondary-range="false"][data-style="2"]) .knob.secondary {
             fill: color-mix(
               in srgb,
-              var(--progress-color, var(--primary-color)) 50%,
+              var(--secondary-progress-color, var(--primary-progress-color, var(--progress-color, var(--primary-color)))) 50%,
               black
             );
           }
-          :host([data-style="2"]) .knob.secondary {
+          :host([data-secondary-range="false"]) .target.secondary {
             fill: color-mix(
               in srgb,
-              var(--progress-color, var(--primary-color)) 50%,
-              black
-            );
-          }            
-          .target.secondary {
-            fill: color-mix(
-              in srgb,
-              var(--progress-color, var(--primary-color)) 65%,
+              var(--secondary-progress-color, var(--primary-progress-color, var(--progress-color, var(--primary-color)))) 65%,
               black
             );
           }
           .target {
             fill: color-mix(
               in srgb,
-              var(--progress-color, var(--primary-color)) 80%,
+              var(--primary-progress-color, var(--progress-color, var(--primary-color))) 80%,
               black
             );
           }            
-          :host([data-secondary-target-reached="true"]) .target.secondary {
+          :host([data-secondary-range="false"][data-secondary-target-reached="true"]) .target.secondary {
             fill: color-mix(
               in srgb,
-              var(--progress-color, var(--primary-color)) 70%,
+              var(--secondary-progress-color, var(--primary-progress-color, var(--progress-color, var(--primary-color)))) 70%,
               white
             );
           }
@@ -621,6 +619,31 @@ class SectionsGaugeCard extends HTMLElement {
     }
     const parsed = this._parseNumber(value);
     return parsed !== null ? parsed : fallback;
+  }
+
+  _resolveRangeColor(ranges, value) {
+    if (!Array.isArray(ranges)) return "";
+    const numericValue = this._parseNumber(value);
+    if (numericValue === null) return "";
+    const parsedRanges = ranges
+      .map((range) => {
+        const rangeValue = this._resolveMinMax(range?.value, null);
+        const color =
+          typeof range?.color === "string" ? range.color.trim() : "";
+        if (rangeValue === null || !color) return null;
+        return { value: rangeValue, color };
+      })
+      .filter(Boolean)
+      .sort((a, b) => a.value - b.value);
+    let chosen = "";
+    for (const range of parsedRanges) {
+      if (numericValue >= range.value) {
+        chosen = range.color;
+      } else {
+        break;
+      }
+    }
+    return chosen;
   }
 
   _render() {
@@ -790,8 +813,9 @@ class SectionsGaugeCard extends HTMLElement {
     let secondaryValueText = "";
     let secondaryUnit = "";
     let isSecondaryZero = false;
+    let value2 = null;
     if (hasSecondaryEntity && secondaryState) {
-      const value2 = this._parseNumber(secondaryState.state);
+      value2 = this._parseNumber(secondaryState.state);
       const unit2 =
         (secondaryConfig.unit_of_measurement || "").trim() ||
         secondaryState.attributes.unit_of_measurement ||
@@ -871,16 +895,33 @@ class SectionsGaugeCard extends HTMLElement {
     } else {
       this.style.removeProperty("--progress-color");
     }
+    const primaryRangeColor = this._resolveRangeColor(primaryConfig.ranges, value);
+    const primaryColor =
+      primaryRangeColor || (hasProgressColor ? this._config.progress_color : "");
+    if (primaryColor) {
+      this.style.setProperty("--primary-progress-color", primaryColor);
+    } else {
+      this.style.removeProperty("--primary-progress-color");
+    }
+    const secondaryRangeColor =
+      hasSecondaryEntity && secondaryState
+        ? this._resolveRangeColor(secondaryConfig.ranges, value2)
+        : "";
+    if (secondaryRangeColor) {
+      this.style.setProperty("--secondary-progress-color", secondaryRangeColor);
+    } else {
+      this.style.removeProperty("--secondary-progress-color");
+    }
+    this.setAttribute(
+      "data-secondary-range",
+      secondaryRangeColor ? "true" : "false"
+    );
     if (isZero) {
       this._progress.style.stroke = "var(--divider-color)";
       this._knob.style.fill = "var(--divider-color)";
       this._knob.style.stroke = "var(--divider-color)";
     } else {
-      if (hasProgressColor) {
-        this._progress.style.stroke = this._config.progress_color;
-      } else {
-        this._progress.style.removeProperty("stroke");
-      }
+      this._progress.style.removeProperty("stroke");
       this._knob.style.removeProperty("fill");
       this._knob.style.removeProperty("stroke");
     }
