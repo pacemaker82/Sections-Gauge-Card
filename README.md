@@ -8,8 +8,6 @@ A simple gauge card with multiple styles and support for multiple entities, targ
 
 ## Installation
 
-Search for `Sections Gauge Card` on the HACS store. If you can't find it, follow these instructions:
-
 1. Goto HACS (if you dont have that installed, install HACS)
 2. Add a custom repository
 3. Add the URL to this repo: `https://github.com/pacemaker82/Sections-Gauge-Card` using the category `Dashboard` (used to be `Lovelace` pre HACS 2.0.0)
@@ -50,8 +48,32 @@ Entities can be used to set a number of fields so that they are more dynamic. Fo
 | Peak Value | `peak` | Integer, Float or Entity ID of a peak value for the gauge (renders as a marker line) |
 | Decimal Places | `decimal_places` | Number of decimal places you want to show for the entity |
 | Unit of Measurement | `unit_of_measurement` | String to override the unit of measurement |
+| Colour Ranges | `ranges` | a list of `color` and `value` pairs to change the gauge colour when a value is passed. Can only be set in YAML |
 
-### Card YAML Example
+#### Colour Ranges
+
+Provide a list in `ranges` with each entity to change the `color` of the gauge when a `value` is passed by the entity state.
+
+A `value` can be an entity state or a integer/float value hard coded
+
+A `color` can be HEX, RGB etc... 
+
+Note: These can only be set in the YAML, not the configuration UI. 
+
+```yaml
+type: custom:sections-gauge-card
+entities:
+  - entity: input_number.test_solar_power
+    min: 0
+    max: 5000
+    ranges:
+      - value: 0
+        color: "#FF0000"
+      - value: sensor.target_entity
+        color: "rgb(100,50,50)"
+```        
+
+### Full Card YAML Example
 
 ```yaml
 type: custom:sections-gauge-card
@@ -110,4 +132,20 @@ transparent: true
 progress_color: var(--energy-solar-color)
 ```
 
-<img width="509" height="258" alt="Screenshot 2026-01-08 at 10 06 03" src="https://github.com/user-attachments/assets/0ae72c1b-ba1f-4b0f-a498-1a7918d6c1cc" />
+<img width="458" height="193" alt="Screenshot 2026-01-09 at 14 58 33" src="https://github.com/user-attachments/assets/81a7568a-5315-436a-b13d-b987cf415d68" />
+
+A card showing different colors when values are passed. `value` can be an integer or an entity. `color` can be HEX, RGB etc...
+
+In this example the color is red when below `0` but above `-3000`, and green when above `0`.
+```yaml
+type: custom:sections-gauge-card
+entities:
+  - entity: input_number.test_solar_power
+    min: -3000
+    max: 3000
+    ranges:
+      - value: 0
+        color: "color-mix(in srgb, #0f9d58 70%, black)"
+      - value: -3000
+        color: "color-mix(in srgb, #ff3333 70%, black)"
+```
