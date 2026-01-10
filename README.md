@@ -8,7 +8,11 @@ A simple gauge card with multiple styles and support for multiple entities, targ
 
 ## Installation
 
+The simplest installation is to goto HACS in Home Assistant and search for `Sections Gauge Card`. Alternatively click the link below:
+
 [![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=pacemaker82&repository=Sections-Gauge-Card)
+
+Otherwise, follow these simple instructions:
 
 1. Goto HACS (if you dont have that installed, install HACS)
 2. Add a custom repository
