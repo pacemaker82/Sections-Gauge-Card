@@ -8,6 +8,8 @@ A simple gauge card with multiple styles and support for multiple entities, targ
 
 ## Installation
 
+[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=pacemaker82&repository=Sections-Gauge-Card)
+
 1. Goto HACS (if you dont have that installed, install HACS)
 2. Add a custom repository
 3. Add the URL to this repo: `https://github.com/pacemaker82/Sections-Gauge-Card` using the category `Dashboard` (used to be `Lovelace` pre HACS 2.0.0)
