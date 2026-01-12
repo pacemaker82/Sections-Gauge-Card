@@ -58,6 +58,10 @@ class SectionsGaugeCard extends HTMLElement {
                   label: "Main Gauge Entity",
                   selector: { entity: {} },
                 },                                                
+                attribute: {
+                  label: "Attribute (optional)",
+                  selector: { text: {} },
+                },
                 target: {
                   label: "Target (number or entity)",
                   selector: { text: {} },
@@ -109,6 +113,7 @@ class SectionsGaugeCard extends HTMLElement {
       entities: [
         {
           entity: "",
+          attribute: "",
           min: 0,
           max: 100,
           target: "",
@@ -133,6 +138,7 @@ class SectionsGaugeCard extends HTMLElement {
       normalized.entities = [
         {
           entity: normalized.entity,
+          attribute: normalized.attribute ?? "",
           min: normalized.min ?? 0,
           max: normalized.max ?? 100,
           target: normalized.target ?? "",
@@ -607,6 +613,17 @@ class SectionsGaugeCard extends HTMLElement {
     return Number.isFinite(parsed) ? parsed : null;
   }
 
+  _getEntityValue(stateObj, attributeName) {
+    if (!stateObj) return null;
+    const attribute =
+      typeof attributeName === "string" ? attributeName.trim() : "";
+    if (attribute) {
+      const attrValue = stateObj.attributes?.[attribute];
+      return attrValue !== undefined && attrValue !== null ? attrValue : null;
+    }
+    return stateObj.state;
+  }
+
   _resolveMinMax(value, fallback) {
     if (value === "") return fallback;
     if (typeof value === "string" && this._hass) {
@@ -663,7 +680,8 @@ class SectionsGaugeCard extends HTMLElement {
 
     const min = this._resolveMinMax(primaryConfig.min, 0);
     const max = this._resolveMinMax(primaryConfig.max, 100);
-    const value = this._parseNumber(stateObj.state);
+    const rawValue = this._getEntityValue(stateObj, primaryConfig.attribute);
+    const value = this._parseNumber(rawValue);
 
     const title = (this._config.title || "").trim();
     this._titleEl.textContent = title;
@@ -803,32 +821,34 @@ class SectionsGaugeCard extends HTMLElement {
       stateObj.attributes.unit_of_measurement ||
       "";
     const displayValue =
-      value === null
+      rawValue === null
         ? "—"
-        : this._formatValue(value, primaryConfig.decimal_places);
+        : this._formatValue(rawValue, primaryConfig.decimal_places);
     const primaryLabel = `${displayValue}${unit}`;
-    const isZero =
-      value !== null && this._parseNumber(displayValue) === 0;
+    const isZero = value !== null && value === 0;
     let secondaryDisplay = "";
     let secondaryValueText = "";
     let secondaryUnit = "";
     let isSecondaryZero = false;
     let value2 = null;
     if (hasSecondaryEntity && secondaryState) {
-      value2 = this._parseNumber(secondaryState.state);
+      const rawValue2 = this._getEntityValue(
+        secondaryState,
+        secondaryConfig.attribute
+      );
+      value2 = this._parseNumber(rawValue2);
       const unit2 =
         (secondaryConfig.unit_of_measurement || "").trim() ||
         secondaryState.attributes.unit_of_measurement ||
         "";
       const displayValue2 =
-        value2 === null
+        rawValue2 === null
           ? "—"
-          : this._formatValue(value2, secondaryConfig.decimal_places);
+          : this._formatValue(rawValue2, secondaryConfig.decimal_places);
       secondaryValueText = displayValue2;
       secondaryUnit = unit2;
       secondaryDisplay = unit2 ? `${displayValue2}${unit2}` : displayValue2;
-      isSecondaryZero =
-        value2 !== null && this._parseNumber(displayValue2) === 0;
+      isSecondaryZero = value2 !== null && value2 === 0;
     }
     const primaryKey = `${displayValue}|${unit}`;
     const secondaryKey = `${secondaryDisplay}`;
@@ -995,7 +1015,11 @@ class SectionsGaugeCard extends HTMLElement {
         const secondaryRadius = radius;
         const secondaryCircumference = 2 * Math.PI * secondaryRadius;
         const secondaryArcLength = (2 / 3) * secondaryCircumference;
-        const value2 = this._parseNumber(secondaryState.state);
+        const rawValue2 = this._getEntityValue(
+          secondaryState,
+          secondaryConfig.attribute
+        );
+        const value2 = this._parseNumber(rawValue2);
         const secondaryMetrics = computeMetrics(
           value2,
           min2,
