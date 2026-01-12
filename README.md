@@ -48,6 +48,7 @@ Entities can be used to set a number of fields so that they are more dynamic. Fo
 | Field Name | YAML Field | Description / Usage |
 |--|--|--|
 | Entity ID | `entity` | Entity ID you want the gauge to display |
+| Attribute | `attribute` | Optional attribute name to read instead of the entity state |
 | Minimum Value | `min` | Integer, Float or Entity ID of the minimum value of the gauge. Supports +/- |
 | Maximum Value | `max` | Integer, Float or Entity ID of the maximum value of the gauge. Supports +/- |
 | Target Value | `target` | Integer, Float or Entity ID of a target value for the gauge |
