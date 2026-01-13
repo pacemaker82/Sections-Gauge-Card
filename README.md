@@ -48,6 +48,8 @@ Entities can be used to set a number of fields so that they are more dynamic. Fo
 | Field Name | YAML Field | Description / Usage |
 |--|--|--|
 | Entity ID | `entity` | Entity ID you want the gauge to display |
+| Name | `name` | Optional label shown under the state label; can be a string or an entity ID |
+| Force Label Colors | `force_label_colors` | Set to `true` to color the state and name labels with the gauge color |
 | Attribute | `attribute` | Optional attribute name to read instead of the entity state |
 | Minimum Value | `min` | Integer, Float or Entity ID of the minimum value of the gauge. Supports +/- |
 | Maximum Value | `max` | Integer, Float or Entity ID of the maximum value of the gauge. Supports +/- |
@@ -86,6 +88,7 @@ entities:
 type: custom:sections-gauge-card
 entities:
   - entity: sensor.givtcp_pv_power
+    name: Solar
     min: 0
     max: 5000
     target: sensor.pv_forecast_now_power
@@ -93,6 +96,7 @@ entities:
     decimal_places: 2
     unit_of_measurement: Watts
   - entity: sensor.pv_energy_today_kwh
+    name: Today
     min: 0
     max: "20"
     target: sensor.prediction_pv_today

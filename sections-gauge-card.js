@@ -58,6 +58,14 @@ class SectionsGaugeCard extends HTMLElement {
                   label: "Main Gauge Entity",
                   selector: { entity: {} },
                 },                                                
+                name: {
+                  label: "Name (optional)",
+                  selector: { text: {} },
+                },
+                force_label_colors: {
+                  label: "Force Label Colors",
+                  selector: { boolean: {} },
+                },
                 attribute: {
                   label: "Attribute (optional)",
                   selector: { text: {} },
@@ -114,6 +122,8 @@ class SectionsGaugeCard extends HTMLElement {
         {
           entity: "",
           attribute: "",
+          name: "",
+          force_label_colors: false,
           min: 0,
           max: 100,
           target: "",
@@ -139,6 +149,8 @@ class SectionsGaugeCard extends HTMLElement {
         {
           entity: normalized.entity,
           attribute: normalized.attribute ?? "",
+          name: normalized.name ?? "",
+          force_label_colors: normalized.force_label_colors ?? false,
           min: normalized.min ?? 0,
           max: normalized.max ?? 100,
           target: normalized.target ?? "",
@@ -201,7 +213,7 @@ class SectionsGaugeCard extends HTMLElement {
           justify-content: center;
           gap: var(--card-gap, 8px);
           height: 100%;
-          cursor: pointer;
+          cursor: default;
           position: relative;
         }
         ha-card.transparent {
@@ -247,8 +259,9 @@ class SectionsGaugeCard extends HTMLElement {
         }
         .value {
           position: absolute;
+          top: calc(var(--value-top, calc(var(--gauge-size, 160px) * 0.35)) + var(--gauge-offset-y, 0px));
+          left: 50%;
           width: calc(var(--gauge-size, 160px) * 0.60);
-          height: calc(var(--gauge-size, 160px) * 0.52);
           display: flex;
           flex-direction: column;
           align-items: center;
@@ -259,7 +272,7 @@ class SectionsGaugeCard extends HTMLElement {
           white-space: normal;
           line-height: 1.0;
           overflow: visible;
-          transform: translateY(calc(var(--gauge-size, 160px) * 0.08));
+          transform: translateX(-50%);
         }
         :host([data-hide-labels="true"]) .value {
           display: none;
@@ -267,7 +280,25 @@ class SectionsGaugeCard extends HTMLElement {
         :host([data-target-reached="true"]) .value .number {
           color: var(--primary-progress-color, var(--progress-color, var(--primary-color)));
         }
+        :host([data-target-reached="true"]) .value .state.primary,
+        :host([data-target-reached="true"]) .value .label.primary {
+          color: var(--primary-progress-color, var(--progress-color, var(--primary-color)));
+        }
         :host([data-secondary-target-reached="true"]) .value .unit {
+          color: var(--secondary-progress-color, var(--primary-progress-color, var(--progress-color, var(--primary-color))));
+        }
+        :host([data-secondary-target-reached="true"]) .value .state.secondary,
+        :host([data-secondary-target-reached="true"]) .value .label.secondary {
+          color: var(--secondary-progress-color, var(--primary-progress-color, var(--progress-color, var(--primary-color))));
+        }
+        :host([data-force-primary-labels="true"]) .value .state.primary,
+        :host([data-force-primary-labels="true"]) .value .label.primary,
+        :host([data-force-primary-labels="true"]) .value .number,
+        :host([data-force-primary-labels="true"]) .value .unit {
+          color: var(--primary-progress-color, var(--progress-color, var(--primary-color)));
+        }
+        :host([data-force-secondary-labels="true"]) .value .state.secondary,
+        :host([data-force-secondary-labels="true"]) .value .label.secondary {
           color: var(--secondary-progress-color, var(--primary-progress-color, var(--progress-color, var(--primary-color))));
         }
         :host([data-primary-zero="true"][data-has-secondary="true"]) .value .number,
@@ -286,6 +317,19 @@ class SectionsGaugeCard extends HTMLElement {
           font-weight: 500;
           opacity: 0.9;
         }
+        .value .state {
+          display: inline-flex;
+          align-items: baseline;
+          gap: calc(var(--gauge-size, 160px) * 0.02);
+        }
+        .value .state.primary {
+          font-size: calc(var(--gauge-size, 160px) * 0.38);
+        }
+        .value .state.secondary {
+          font-size: calc(var(--gauge-size, 160px) * 0.145);
+          font-weight: 500;
+          opacity: 0.9;
+        }
         .value .number,
         .value .unit {
           display: inline-flex;
@@ -296,6 +340,26 @@ class SectionsGaugeCard extends HTMLElement {
           font-size: 0.72em;
           font-weight: 500;
           opacity: 0.9;
+        }
+        .value .labels {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: calc(var(--gauge-size, 160px) * 0.015);
+          width: 100%;
+        }
+        .value .label {
+          font-size: calc(var(--gauge-size, 160px) * 0.11);
+          font-weight: 500;
+          color: var(--secondary-text-color);
+          line-height: 1.1;
+          max-width: 100%;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+        .value .is-clickable {
+          cursor: pointer;
         }
         svg {
           width: var(--gauge-size, 160px);
@@ -500,6 +564,14 @@ class SectionsGaugeCard extends HTMLElement {
               black
             );
           }
+          :host([data-secondary-range="false"][data-force-secondary-labels="true"]) .value .state.secondary,
+          :host([data-secondary-range="false"][data-force-secondary-labels="true"]) .value .label.secondary {
+            color: color-mix(
+              in srgb,
+              var(--secondary-progress-color, var(--primary-progress-color, var(--progress-color, var(--primary-color)))) 50%,
+              black
+            );
+          }
           :host([data-secondary-range="false"]) .target.secondary {
             fill: color-mix(
               in srgb,
@@ -551,7 +623,6 @@ class SectionsGaugeCard extends HTMLElement {
       </ha-card>
     `;
     this._card = this._root.querySelector(".card");
-    this._card.addEventListener("click", () => this._openMoreInfo());
     this._arcGroup = this._root.querySelector(".arc");
     this._track = this._root.querySelector(".track");
     this._targetArc = this._root.querySelector(".target-arc:not(.secondary)");
@@ -663,6 +734,16 @@ class SectionsGaugeCard extends HTMLElement {
     return chosen;
   }
 
+  _resolveNameLabel(nameValue) {
+    if (typeof nameValue !== "string") return "";
+    const trimmed = nameValue.trim();
+    if (!trimmed) return "";
+    const stateObj = this._hass?.states?.[trimmed];
+    if (!stateObj) return trimmed;
+    const unit = stateObj.attributes?.unit_of_measurement || "";
+    return unit ? `${stateObj.state}${unit}` : `${stateObj.state}`;
+  }
+
   _render() {
     if (!this._hass || !this._config) return;
     const entities = Array.isArray(this._config.entities) ? this._config.entities : [];
@@ -717,11 +798,20 @@ class SectionsGaugeCard extends HTMLElement {
     };
     const primaryMetrics = computeMetrics(value, min, max, arcLength);
 
-    const yOffset =
-      !this._card.classList.contains("has-title") &&
-      !this._card.classList.contains("landscape")
+    const primaryName = this._resolveNameLabel(primaryConfig.name);
+    let secondaryName = "";
+    if (hasSecondaryEntity && secondaryState) {
+      secondaryName = this._resolveNameLabel(secondaryConfig.name);
+    }
+    const hasDualLabels =
+      hasSecondaryEntity && secondaryState && primaryName && secondaryName;
+    const yOffset = hasDualLabels
+      ? 5
+      : !this._card.classList.contains("has-title") &&
+          !this._card.classList.contains("landscape")
         ? 10
         : 0;
+    this.style.setProperty("--gauge-offset-y", `${yOffset}px`);
     this._arcGroup.setAttribute(
       "transform",
       `translate(0 ${yOffset}) rotate(-210 50 50)`
@@ -850,34 +940,74 @@ class SectionsGaugeCard extends HTMLElement {
       secondaryDisplay = unit2 ? `${displayValue2}${unit2}` : displayValue2;
       isSecondaryZero = value2 !== null && value2 === 0;
     }
-    const primaryKey = `${displayValue}|${unit}`;
-    const secondaryKey = `${secondaryDisplay}`;
+    const primaryKey = `${displayValue}|${unit}|${primaryName}`;
+    const secondaryKey = `${secondaryDisplay}|${secondaryName}`;
     const primaryChanged = this._lastPrimaryKey !== primaryKey;
     const secondaryChanged = this._lastSecondaryKey !== secondaryKey;
     const shouldUpdateValue = primaryChanged || secondaryChanged;
     if (shouldUpdateValue) {
-      let numberEl = this._valueEl.querySelector(".number");
-      let unitEl = this._valueEl.querySelector(".unit");
-      if (!numberEl) {
-        this._valueEl.textContent = "";
-        numberEl = document.createElement("span");
-        numberEl.className = "number";
-        this._valueEl.appendChild(numberEl);
-      }
+      this._valueContentVersion = (this._valueContentVersion || 0) + 1;
+      this._lastValueFitKey = null;
+      this._lastLabelFitKey = null;
       if (hasSecondaryEntity && secondaryState) {
-        numberEl.innerHTML = unit
+        this._valueEl.textContent = "";
+        const primaryStateEl = document.createElement("span");
+        primaryStateEl.className = "state primary is-clickable";
+        primaryStateEl.innerHTML = unit
           ? `<span class="num">${displayValue}</span><span class="uom">${unit}</span>`
           : `<span class="num">${displayValue}</span>`;
-        if (!unitEl) {
-          unitEl = document.createElement("span");
-          unitEl.className = "unit";
-          this._valueEl.appendChild(unitEl);
+        primaryStateEl.addEventListener("click", (event) => {
+          event.stopPropagation();
+          this._openMoreInfoForEntity(primaryConfig.entity);
+        });
+        this._valueEl.appendChild(primaryStateEl);
+        if (primaryName) {
+          const primaryLabelEl = document.createElement("span");
+          primaryLabelEl.className = "label primary is-clickable";
+          primaryLabelEl.textContent = primaryName;
+          primaryLabelEl.addEventListener("click", (event) => {
+            event.stopPropagation();
+            this._openMoreInfoForEntity(primaryConfig.entity);
+          });
+          this._valueEl.appendChild(primaryLabelEl);
         }
-        unitEl.innerHTML = secondaryUnit
+        const secondaryStateEl = document.createElement("span");
+        secondaryStateEl.className = "state secondary";
+        secondaryStateEl.innerHTML = secondaryUnit
           ? `<span class="num">${secondaryValueText}</span><span class="uom">${secondaryUnit}</span>`
           : `<span class="num">${secondaryValueText}</span>`;
+        this._valueEl.appendChild(secondaryStateEl);
+        if (secondaryName) {
+          const secondaryLabelEl = document.createElement("span");
+          secondaryLabelEl.className = "label secondary is-clickable";
+          secondaryLabelEl.textContent = secondaryName;
+          secondaryLabelEl.addEventListener("click", (event) => {
+            event.stopPropagation();
+            this._openMoreInfoForEntity(secondaryConfig.entity);
+          });
+          this._valueEl.appendChild(secondaryLabelEl);
+        }
+        secondaryStateEl.classList.add("is-clickable");
+        secondaryStateEl.addEventListener("click", (event) => {
+          event.stopPropagation();
+          this._openMoreInfoForEntity(secondaryConfig.entity);
+        });
+        this._fitLabelText(this._valueEl);
       } else {
+        let numberEl = this._valueEl.querySelector(".number");
+        let unitEl = this._valueEl.querySelector(".unit");
+        if (!numberEl) {
+          this._valueEl.textContent = "";
+          numberEl = document.createElement("span");
+          numberEl.className = "number";
+          this._valueEl.appendChild(numberEl);
+        }
         numberEl.textContent = displayValue;
+        numberEl.classList.add("is-clickable");
+        numberEl.addEventListener("click", (event) => {
+          event.stopPropagation();
+          this._openMoreInfoForEntity(primaryConfig.entity);
+        });
         if (unit) {
           if (!unitEl) {
             unitEl = document.createElement("span");
@@ -885,10 +1015,37 @@ class SectionsGaugeCard extends HTMLElement {
             this._valueEl.appendChild(unitEl);
           }
           unitEl.textContent = unit;
+          unitEl.classList.add("is-clickable");
+          unitEl.addEventListener("click", (event) => {
+            event.stopPropagation();
+            this._openMoreInfoForEntity(primaryConfig.entity);
+          });
         } else if (unitEl) {
           unitEl.remove();
         }
+        const showPrimaryLabel = Boolean(primaryName);
+        let labelsEl = this._valueEl.querySelector(".labels");
+        if (showPrimaryLabel) {
+          if (!labelsEl) {
+            labelsEl = document.createElement("div");
+            labelsEl.className = "labels";
+            this._valueEl.appendChild(labelsEl);
+          }
+          labelsEl.textContent = "";
+          const primaryLabelEl = document.createElement("span");
+          primaryLabelEl.className = "label primary is-clickable";
+          primaryLabelEl.textContent = primaryName;
+          labelsEl.appendChild(primaryLabelEl);
+          primaryLabelEl.addEventListener("click", (event) => {
+            event.stopPropagation();
+            this._openMoreInfoForEntity(primaryConfig.entity);
+          });
+          this._fitLabelText(labelsEl);
+        } else if (labelsEl) {
+          labelsEl.remove();
+        }
       }
+      this._scheduleTextFit();
       this._lastPrimaryKey = primaryKey;
       this._lastSecondaryKey = secondaryKey;
     }
@@ -903,6 +1060,14 @@ class SectionsGaugeCard extends HTMLElement {
     this.setAttribute(
       "data-hide-labels",
       this._config.hide_state_labels ? "true" : "false"
+    );
+    this.setAttribute(
+      "data-force-primary-labels",
+      primaryConfig.force_label_colors ? "true" : "false"
+    );
+    this.setAttribute(
+      "data-force-secondary-labels",
+      hasSecondaryEntity && secondaryConfig?.force_label_colors ? "true" : "false"
     );
     this.setAttribute("data-primary-zero", isZero ? "true" : "false");
     this.setAttribute("data-secondary-zero", isSecondaryZero ? "true" : "false");
@@ -1261,6 +1426,7 @@ class SectionsGaugeCard extends HTMLElement {
     if (this._hass && this._config) {
       this._render();
     }
+    this._scheduleTextFit();
   }
 
   _getTitleHeight() {
@@ -1285,21 +1451,52 @@ class SectionsGaugeCard extends HTMLElement {
       parseFloat(getComputedStyle(this).getPropertyValue("--gauge-size"));
     if (!size) return;
     const numberEl = this._valueEl.querySelector(".number");
-    if (!numberEl) return;
+    const primaryStateEl = this._valueEl.querySelector(".state.primary");
+    const targetEl = numberEl || primaryStateEl;
+    if (!targetEl) return;
     const availableWidth = this._valueEl.clientWidth;
     if (!availableWidth) return;
-    const key = `${size}-${availableWidth}-${numberEl.textContent || ""}`;
+    const key = `${this._valueContentVersion || 0}-${size}-${availableWidth}-${targetEl.textContent || ""}`;
     if (this._lastValueFitKey === key) return;
     this._lastValueFitKey = key;
 
     const maxFont = size * 0.33;
     const minFont = size * 0.12;
-    numberEl.style.fontSize = `${maxFont}px`;
-    const textWidth = numberEl.scrollWidth;
+    targetEl.style.fontSize = `${maxFont}px`;
+    const textWidth = targetEl.scrollWidth;
     const scale = Math.min(1, availableWidth / textWidth);
     const fitted = Math.max(minFont, maxFont * scale);
-    numberEl.style.fontSize = `${fitted}px`;
+    targetEl.style.fontSize = `${fitted}px`;
     this._lastFitLayoutVersion = this._layoutVersion;
+    const labelsEl = this._valueEl.querySelector(".labels");
+    if (labelsEl) {
+      this._fitLabelText(labelsEl);
+    }
+  }
+
+  _fitLabelText(labelsEl) {
+    if (!labelsEl || !this._valueEl) return;
+    const size =
+      this._lastGaugeSize ||
+      parseFloat(getComputedStyle(this).getPropertyValue("--gauge-size"));
+    if (!size) return;
+    const availableWidth = labelsEl.clientWidth;
+    if (!availableWidth) return;
+    const labels = Array.from(labelsEl.querySelectorAll(".label"));
+    if (!labels.length) return;
+    const key = `${this._valueContentVersion || 0}-${size}-${availableWidth}-${labels.map((label) => label.textContent || "").join("|")}`;
+    if (this._lastLabelFitKey === key) return;
+    this._lastLabelFitKey = key;
+
+    const maxFont = size * 0.11;
+    const minFont = size * 0.07;
+    labels.forEach((label) => {
+      label.style.fontSize = `${maxFont}px`;
+      const textWidth = label.scrollWidth;
+      const scale = Math.min(1, availableWidth / textWidth);
+      const fitted = Math.max(minFont, maxFont * scale);
+      label.style.fontSize = `${fitted}px`;
+    });
   }
 
   _fitTitleText() {
@@ -1307,16 +1504,25 @@ class SectionsGaugeCard extends HTMLElement {
   }
 
   _scheduleTextFit() {
-    return;
+    if (this._textFitScheduled) return;
+    this._textFitScheduled = true;
+    requestAnimationFrame(() => {
+      this._textFitScheduled = false;
+      this._fitValueText();
+    });
+    if (!this._fontsReadyAttached && document?.fonts?.ready) {
+      this._fontsReadyAttached = true;
+      document.fonts.ready.then(() => {
+        this._fitValueText();
+      });
+    }
   }
 
   getCardSize() {
     return 3;
   }
 
-  _openMoreInfo() {
-    const entities = Array.isArray(this._config?.entities) ? this._config.entities : [];
-    const entityId = entities[0]?.entity;
+  _openMoreInfoForEntity(entityId) {
     if (!entityId) return;
     this.dispatchEvent(
       new CustomEvent("hass-more-info", {
@@ -1325,6 +1531,12 @@ class SectionsGaugeCard extends HTMLElement {
         composed: true,
       })
     );
+  }
+
+  _openMoreInfo() {
+    const entities = Array.isArray(this._config?.entities) ? this._config.entities : [];
+    const entityId = entities[0]?.entity;
+    this._openMoreInfoForEntity(entityId);
   }
 }
 
