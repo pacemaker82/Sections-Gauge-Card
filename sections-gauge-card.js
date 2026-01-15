@@ -311,6 +311,7 @@ class SectionsGaugeCard extends HTMLElement {
         }
         .value .number {
           font-size: calc(var(--gauge-size, 160px) * 0.38);
+          white-space: nowrap;
         }
         .value .unit {
           font-size: calc(var(--gauge-size, 160px) * 0.145);
@@ -321,6 +322,7 @@ class SectionsGaugeCard extends HTMLElement {
           display: inline-flex;
           align-items: baseline;
           gap: calc(var(--gauge-size, 160px) * 0.02);
+          white-space: nowrap;
         }
         .value .state.primary {
           font-size: calc(var(--gauge-size, 160px) * 0.38);
@@ -709,6 +711,28 @@ class SectionsGaugeCard extends HTMLElement {
     return parsed !== null ? parsed : fallback;
   }
 
+  _isUnset(value) {
+    if (value === null || value === undefined) return true;
+    if (typeof value === "string" && value.trim() === "") return true;
+    return false;
+  }
+
+  _deriveAutoMinMax(values) {
+    const candidates = values.filter((val) => Number.isFinite(val));
+    if (!candidates.length) return null;
+    let min = Math.min(...candidates);
+    let max = Math.max(...candidates);
+    let padding = 0;
+    if (min === max) {
+      padding = Math.max(1, Math.abs(min) * 0.1);
+    } else {
+      padding = (max - min) * 0.1;
+    }
+    min -= padding;
+    max += padding;
+    return { min, max };
+  }
+
   _resolveRangeColor(ranges, value) {
     if (!Array.isArray(ranges)) return "";
     const numericValue = this._parseNumber(value);
@@ -734,14 +758,61 @@ class SectionsGaugeCard extends HTMLElement {
     return chosen;
   }
 
-  _resolveNameLabel(nameValue) {
+  _resolveNameLabel(nameValue, decimalPlaces) {
     if (typeof nameValue !== "string") return "";
     const trimmed = nameValue.trim();
     if (!trimmed) return "";
     const stateObj = this._hass?.states?.[trimmed];
     if (!stateObj) return trimmed;
-    const unit = stateObj.attributes?.unit_of_measurement || "";
-    return unit ? `${stateObj.state}${unit}` : `${stateObj.state}`;
+    const unit = (stateObj.attributes?.unit_of_measurement || "").trim();
+    const formattedState =
+      decimalPlaces === null || decimalPlaces === undefined || decimalPlaces === ""
+        ? `${stateObj.state}`
+        : this._formatValue(stateObj.state, decimalPlaces);
+    const deviceClass = stateObj.attributes?.device_class || "";
+    if (deviceClass === "monetary" && unit) {
+      const symbol = this._getCurrencySymbol(unit);
+      if (symbol) {
+        if (formattedState.startsWith("-")) {
+          return `-${symbol}${formattedState.slice(1)}`;
+        }
+        return `${symbol}${formattedState}`;
+      }
+    }
+    return unit ? `${formattedState}${unit}` : `${formattedState}`;
+  }
+
+  _getCurrencySymbol(unit) {
+    const normalized = (unit || "").trim().toUpperCase();
+    if (normalized === "USD") return "$";
+    if (normalized === "EUR") return "€";
+    if (normalized === "GBP") return "£";
+    if (normalized === "CAD") return "$";
+    if (normalized === "AUD") return "$";
+    if (normalized === "NZD") return "$";
+    if (normalized === "CHF") return "CHF";
+    if (normalized === "JPY") return "¥";
+    if (normalized === "CNY") return "¥";
+    if (normalized === "SEK") return "kr";
+    if (normalized === "NOK") return "kr";
+    if (normalized === "DKK") return "kr";
+    if (normalized === "PLN") return "zł";
+    return "";
+  }
+
+  _formatMonetaryDisplay(valueText, unit, deviceClass) {
+    if (deviceClass !== "monetary") return { valueText, unit, unitLabel: unit };
+    const symbol = this._getCurrencySymbol(unit);
+    if (!symbol) return { valueText, unit, unitLabel: unit };
+    if (valueText === "—") return { valueText, unit: "", unitLabel: unit };
+    if (valueText.startsWith("-")) {
+      return {
+        valueText: `-${symbol}${valueText.slice(1)}`,
+        unit: "",
+        unitLabel: unit,
+      };
+    }
+    return { valueText: `${symbol}${valueText}`, unit: "", unitLabel: unit };
   }
 
   _render() {
@@ -759,10 +830,21 @@ class SectionsGaugeCard extends HTMLElement {
 
     if (!this._layoutReady) return;
 
-    const min = this._resolveMinMax(primaryConfig.min, 0);
-    const max = this._resolveMinMax(primaryConfig.max, 100);
+    const minIsUnset = this._isUnset(primaryConfig.min);
+    const maxIsUnset = this._isUnset(primaryConfig.max);
+    let min = this._resolveMinMax(primaryConfig.min, 0);
+    let max = this._resolveMinMax(primaryConfig.max, 100);
     const rawValue = this._getEntityValue(stateObj, primaryConfig.attribute);
     const value = this._parseNumber(rawValue);
+    const targetValue = this._resolveMinMax(primaryConfig.target, null);
+    const peakValue = this._resolveMinMax(primaryConfig.peak, null);
+    if (minIsUnset && maxIsUnset) {
+      const auto = this._deriveAutoMinMax([value, targetValue, peakValue]);
+      if (auto) {
+        min = auto.min;
+        max = auto.max;
+      }
+    }
 
     const title = (this._config.title || "").trim();
     this._titleEl.textContent = title;
@@ -798,10 +880,16 @@ class SectionsGaugeCard extends HTMLElement {
     };
     const primaryMetrics = computeMetrics(value, min, max, arcLength);
 
-    const primaryName = this._resolveNameLabel(primaryConfig.name);
+    const primaryName = this._resolveNameLabel(
+      primaryConfig.name,
+      primaryConfig.decimal_places
+    );
     let secondaryName = "";
     if (hasSecondaryEntity && secondaryState) {
-      secondaryName = this._resolveNameLabel(secondaryConfig.name);
+      secondaryName = this._resolveNameLabel(
+        secondaryConfig.name,
+        secondaryConfig.decimal_places
+      );
     }
     const hasDualLabels =
       hasSecondaryEntity && secondaryState && primaryName && secondaryName;
@@ -914,7 +1002,13 @@ class SectionsGaugeCard extends HTMLElement {
       rawValue === null
         ? "—"
         : this._formatValue(rawValue, primaryConfig.decimal_places);
-    const primaryLabel = `${displayValue}${unit}`;
+    const primaryDeviceClass = stateObj.attributes?.device_class || "";
+    const primaryFormatted = this._formatMonetaryDisplay(
+      displayValue,
+      unit,
+      primaryDeviceClass
+    );
+    const primaryLabel = `${primaryFormatted.valueText}${primaryFormatted.unit}`;
     const isZero = value !== null && value === 0;
     let secondaryDisplay = "";
     let secondaryValueText = "";
@@ -935,12 +1029,20 @@ class SectionsGaugeCard extends HTMLElement {
         rawValue2 === null
           ? "—"
           : this._formatValue(rawValue2, secondaryConfig.decimal_places);
-      secondaryValueText = displayValue2;
-      secondaryUnit = unit2;
-      secondaryDisplay = unit2 ? `${displayValue2}${unit2}` : displayValue2;
+      const secondaryDeviceClass = secondaryState.attributes?.device_class || "";
+      const secondaryFormatted = this._formatMonetaryDisplay(
+        displayValue2,
+        unit2,
+        secondaryDeviceClass
+      );
+      secondaryValueText = secondaryFormatted.valueText;
+      secondaryUnit = secondaryFormatted.unit;
+      secondaryDisplay = secondaryFormatted.unit
+        ? `${secondaryFormatted.valueText}${secondaryFormatted.unit}`
+        : secondaryFormatted.valueText;
       isSecondaryZero = value2 !== null && value2 === 0;
     }
-    const primaryKey = `${displayValue}|${unit}|${primaryName}`;
+    const primaryKey = `${primaryFormatted.valueText}|${primaryFormatted.unit}|${primaryFormatted.unitLabel}|${primaryName}`;
     const secondaryKey = `${secondaryDisplay}|${secondaryName}`;
     const primaryChanged = this._lastPrimaryKey !== primaryKey;
     const secondaryChanged = this._lastSecondaryKey !== secondaryKey;
@@ -953,9 +1055,9 @@ class SectionsGaugeCard extends HTMLElement {
         this._valueEl.textContent = "";
         const primaryStateEl = document.createElement("span");
         primaryStateEl.className = "state primary is-clickable";
-        primaryStateEl.innerHTML = unit
-          ? `<span class="num">${displayValue}</span><span class="uom">${unit}</span>`
-          : `<span class="num">${displayValue}</span>`;
+        primaryStateEl.innerHTML = primaryFormatted.unit
+          ? `<span class="num">${primaryFormatted.valueText}</span><span class="uom">${primaryFormatted.unit}</span>`
+          : `<span class="num">${primaryFormatted.valueText}</span>`;
         primaryStateEl.addEventListener("click", (event) => {
           event.stopPropagation();
           this._openMoreInfoForEntity(primaryConfig.entity);
@@ -1002,19 +1104,19 @@ class SectionsGaugeCard extends HTMLElement {
           numberEl.className = "number";
           this._valueEl.appendChild(numberEl);
         }
-        numberEl.textContent = displayValue;
+        numberEl.textContent = primaryFormatted.valueText;
         numberEl.classList.add("is-clickable");
         numberEl.addEventListener("click", (event) => {
           event.stopPropagation();
           this._openMoreInfoForEntity(primaryConfig.entity);
         });
-        if (unit) {
+        if (primaryFormatted.unitLabel) {
           if (!unitEl) {
             unitEl = document.createElement("span");
             unitEl.className = "unit";
             this._valueEl.appendChild(unitEl);
           }
-          unitEl.textContent = unit;
+          unitEl.textContent = primaryFormatted.unitLabel;
           unitEl.classList.add("is-clickable");
           unitEl.addEventListener("click", (event) => {
             event.stopPropagation();
@@ -1111,7 +1213,6 @@ class SectionsGaugeCard extends HTMLElement {
       this._knob.style.removeProperty("stroke");
     }
 
-    const targetValue = this._resolveMinMax(primaryConfig.target, null);
     if (targetValue === null) {
       this.setAttribute("data-has-target", "false");
       this.setAttribute("data-target-reached", "false");
@@ -1154,7 +1255,6 @@ class SectionsGaugeCard extends HTMLElement {
       }
     }
 
-    const peakValue = this._resolveMinMax(primaryConfig.peak, null);
     if (peakValue === null) {
       this.removeAttribute("data-has-peak");
       this._peakMarker.style.transform = "";
@@ -1167,8 +1267,8 @@ class SectionsGaugeCard extends HTMLElement {
     }
 
     if (hasSecondaryEntity) {
-      const min2 = this._resolveMinMax(secondaryConfig.min, 0);
-      const max2 = this._resolveMinMax(secondaryConfig.max, 100);
+      const min2IsUnset = this._isUnset(secondaryConfig.min);
+      const max2IsUnset = this._isUnset(secondaryConfig.max);
       if (!secondaryState) {
         this.setAttribute("data-has-secondary", "false");
         this.setAttribute("data-secondary-target-reached", "false");
@@ -1185,6 +1285,17 @@ class SectionsGaugeCard extends HTMLElement {
           secondaryConfig.attribute
         );
         const value2 = this._parseNumber(rawValue2);
+        const targetValue2 = this._resolveMinMax(secondaryConfig.target, null);
+        const peakValue2 = this._resolveMinMax(secondaryConfig.peak, null);
+        let min2 = this._resolveMinMax(secondaryConfig.min, 0);
+        let max2 = this._resolveMinMax(secondaryConfig.max, 100);
+        if (min2IsUnset && max2IsUnset) {
+          const auto2 = this._deriveAutoMinMax([value2, targetValue2, peakValue2]);
+          if (auto2) {
+            min2 = auto2.min;
+            max2 = auto2.max;
+          }
+        }
         const secondaryMetrics = computeMetrics(
           value2,
           min2,
@@ -1270,7 +1381,6 @@ class SectionsGaugeCard extends HTMLElement {
         const endAngle2 = sweepAngle * secondaryMetrics.ratio;
         this._knobSecondary.style.transform = `rotate(${endAngle2}deg)`;
 
-        const targetValue2 = this._resolveMinMax(secondaryConfig.target, null);
         if (targetValue2 === null) {
           this._targetSecondary.style.display = "none";
           this.setAttribute("data-secondary-target-reached", "false");
@@ -1314,17 +1424,16 @@ class SectionsGaugeCard extends HTMLElement {
           this._targetSecondary.style.display = reached2 ? "none" : "block";
           this.setAttribute("data-secondary-target-reached", reached2 ? "true" : "false");
           this.setAttribute("data-has-secondary-target", reached2 ? "false" : "true");
-          if (this._targetSecondaryTitle) {
-            const targetDisplay2 = this._formatValue(
-              targetValue2,
-              secondaryConfig.decimal_places
-            );
-            const unitSuffix2 = secondaryUnit ? ` ${secondaryUnit}` : "";
-            this._targetSecondaryTitle.textContent = `Target: ${targetDisplay2}${unitSuffix2}`;
-          }
+        if (this._targetSecondaryTitle) {
+          const targetDisplay2 = this._formatValue(
+            targetValue2,
+            secondaryConfig.decimal_places
+          );
+          const unitSuffix2 = secondaryUnit ? ` ${secondaryUnit}` : "";
+          this._targetSecondaryTitle.textContent = `Target: ${targetDisplay2}${unitSuffix2}`;
         }
+      }
 
-        const peakValue2 = this._resolveMinMax(secondaryConfig.peak, null);
         if (peakValue2 === null) {
           this.removeAttribute("data-has-secondary-peak");
           this._peakMarkerSecondary.style.transform = "";
