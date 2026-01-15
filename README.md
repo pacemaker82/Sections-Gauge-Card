@@ -61,7 +61,7 @@ Entities can be used to set a number of fields so that they are more dynamic. Fo
 
 #### Min & Max
 
-If your minimum and maximum guage values could be dynamic, do not set `min` or `max` on the entity, this way the card will automatically figure out the best min/max to use with a 10% buffer to give the guage a good look and feel. 
+If your minimum and maximum gauge values could be dynamic, do not set `min` or `max` on the entity, this way the card will automatically figure out the best min/max to use with a 10% buffer to give the gauge a good look and feel. 
 
 #### Colour Ranges
 
