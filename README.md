@@ -59,6 +59,10 @@ Entities can be used to set a number of fields so that they are more dynamic. Fo
 | Unit of Measurement | `unit_of_measurement` | String to override the unit of measurement |
 | Colour Ranges | `ranges` | a list of `color` and `value` pairs to change the gauge colour when a value is passed. Can only be set in YAML |
 
+#### Min & Max
+
+If your minimum and maximum guage values could be dynamic, do not set `min` or `max` on the entity, this way the card will automatically figure out the best min/max to use with a 10% buffer to give the guage a good look and feel. 
+
 #### Colour Ranges
 
 Provide a list in `ranges` with each entity to change the `color` of the gauge when a `value` is passed by the entity state.
