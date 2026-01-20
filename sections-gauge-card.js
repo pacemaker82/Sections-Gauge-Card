@@ -545,8 +545,8 @@ class SectionsGaugeCard extends HTMLElement {
           .target-arc {
             stroke: color-mix(
               in srgb,
-              var(--secondary-text-color) 20%,
-              black
+              var(--primary-progress-color, var(--progress-color, var(--primary-color))) 30%,
+              var(--card-background-color)
             );
             stroke-opacity: 1;
           }
